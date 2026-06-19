@@ -1,0 +1,1612 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dr. Bugeon의 학습계획표</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@300;400;600;700&family=Noto+Sans+KR:wght@300;400;500;700&family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{--cream:#f9f5ef;--gold:#c8a96e;--ink:#3a3228;--ink-light:#6b5f53;--shadow:rgba(58,50,40,0.12);--danger:#d45f5f;}
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--cream);font-family:'Noto Sans KR',sans-serif;color:var(--ink);min-height:100vh;}
+
+  header{text-align:center;padding:32px 20px 16px;}
+  header::after{content:'';display:block;width:50px;height:2px;background:var(--gold);margin:10px auto 0;border-radius:2px;}
+  .header-title{font-family:'Noto Serif KR',serif;font-size:1.9rem;font-weight:700;}
+  .header-sub{font-size:0.82rem;color:var(--ink-light);margin-top:3px;letter-spacing:0.08em;}
+  .main-wrap{max-width:980px;margin:0 auto;padding:18px 18px 120px;}
+  .mode-pill{display:inline-block;background:#f5f0e8;border:1px solid #e6dccd;border-radius:999px;padding:2px 10px;margin-right:6px;color:var(--ink);letter-spacing:0;font-weight:700;}
+
+  /* PROGRESS */
+  .progress-section{background:white;border-radius:16px;padding:18px 22px;box-shadow:0 2px 12px var(--shadow);margin-bottom:18px;}
+  .progress-label{display:flex;justify-content:space-between;font-size:0.76rem;color:var(--ink-light);margin-bottom:7px;}
+  .progress-bar-bg{background:#f0ebe3;border-radius:8px;height:9px;overflow:hidden;}
+  .progress-bar-fill{height:100%;background:linear-gradient(90deg,var(--gold),#e8b86d);border-radius:8px;transition:width 1s ease;}
+  .progress-segments{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;}
+  .seg-item{display:flex;align-items:center;gap:4px;font-size:0.7rem;color:var(--ink-light);}
+  .color-dot{display:inline-block;width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+
+  /* GOALS */
+  .goals-section{background:white;border-radius:16px;padding:18px 22px;box-shadow:0 2px 12px var(--shadow);margin-bottom:22px;}
+  .goals-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
+  .goals-title{font-family:'Noto Serif KR',serif;font-size:0.92rem;font-weight:600;display:flex;align-items:center;gap:6px;}
+  .goals-date{font-size:0.72rem;color:var(--ink-light);letter-spacing:0.05em;}
+  .goals-input-wrap{position:relative;}
+  .goals-textarea{width:100%;border:1.5px solid #e8e0d4;border-radius:10px;padding:11px 14px;font-family:'Noto Sans KR',sans-serif;font-size:0.84rem;color:var(--ink);background:#fdfaf6;resize:none;outline:none;transition:border-color 0.2s;line-height:1.7;min-height:72px;}
+  .goals-textarea:focus{border-color:var(--gold);background:white;}
+  .goals-textarea::placeholder{color:#c0b8ae;}
+  .goals-save-btn{position:absolute;right:10px;bottom:10px;background:var(--gold);color:white;border:none;border-radius:7px;padding:5px 14px;font-size:0.73rem;font-weight:600;cursor:pointer;opacity:0;transition:opacity 0.2s;font-family:'Noto Sans KR',sans-serif;}
+  .goals-input-wrap:focus-within .goals-save-btn{opacity:1;}
+  .goals-tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;}
+  .goal-tag{display:inline-flex;align-items:center;gap:5px;background:#f5f0e8;border-radius:20px;padding:4px 12px 4px 10px;font-size:0.75rem;color:var(--ink-light);}
+  .goal-tag-del{background:none;border:none;cursor:pointer;font-size:0.7rem;color:#b0a898;padding:0;}
+  .goal-tag-del:hover{color:var(--danger);}
+  .goals-empty{font-size:0.78rem;color:#c0b8ae;font-style:italic;}
+
+  /* CLOCK */
+  .clock-section{display:flex;flex-direction:column;align-items:center;margin-bottom:28px;}
+  .clock-container{position:relative;width:380px;height:380px;}
+  #clockCanvas{width:380px;height:380px;filter:drop-shadow(0 4px 16px var(--shadow));}
+  .clock-center-info{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none;}
+  .clock-time-now{font-family:'Playfair Display',serif;font-size:1.55rem;}
+  .clock-label-now{font-size:0.62rem;color:var(--ink-light);letter-spacing:0.1em;text-transform:uppercase;margin-top:2px;}
+  .current-task-banner{margin-top:16px;background:white;border-radius:14px;padding:14px 26px;text-align:center;box-shadow:0 2px 12px var(--shadow);width:380px;border-left:4px solid var(--gold);}
+  .banner-time{font-size:0.73rem;color:var(--ink-light);}
+  .banner-task{font-family:'Noto Serif KR',serif;font-size:1rem;font-weight:600;margin:3px 0 2px;}
+  .banner-strategy{font-size:0.76rem;color:var(--ink-light);line-height:1.5;}
+
+  /* TOOLBAR */
+  .toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px;}
+  .toolbar-title{font-family:'Noto Serif KR',serif;font-size:1rem;font-weight:600;}
+  .toolbar-btns{display:flex;gap:8px;flex-wrap:wrap;}
+  .btn{padding:8px 18px;border-radius:10px;font-size:0.8rem;font-weight:600;cursor:pointer;border:none;transition:all 0.2s;font-family:'Noto Sans KR',sans-serif;}
+  .btn-add{background:var(--ink);color:var(--cream);}
+  .btn-add:hover{background:#2a2218;}
+  .btn-reset{background:#f0ebe3;color:var(--ink-light);}
+  .btn-reset:hover{background:#e8dfd3;}
+  .btn-danger{background:#fdeaea;color:var(--danger);}
+  .btn-danger:hover{background:#f9d4d4;}
+  .btn-cancel{background:#f0ebe3;color:var(--ink-light);}
+  .btn-cancel:hover{background:#e8dfd3;}
+  .btn-save{background:var(--ink);color:var(--cream);}
+  .btn-save:hover{background:#2a2218;}
+
+  /* TABLE */
+  .schedule-table-wrap{background:white;border-radius:18px;overflow:hidden;box-shadow:0 2px 20px var(--shadow);}
+  table{width:100%;border-collapse:collapse;}
+  thead tr{background:var(--ink);color:#f9f5ef;}
+  thead th{padding:13px 16px;font-size:0.76rem;font-weight:500;letter-spacing:0.07em;text-align:left;}
+  tbody tr{border-bottom:1px solid #f0ebe3;transition:background 0.2s;}
+  tbody tr:hover{background:#fdf9f4;}
+  tbody tr.active-row{background:#fffdf5;box-shadow:inset 3px 0 0 var(--gold);}
+  tbody td{padding:11px 16px;font-size:0.82rem;vertical-align:middle;}
+  .td-time{font-family:'Playfair Display',serif;font-size:0.88rem;white-space:nowrap;font-weight:600;}
+  .td-task{font-weight:500;}
+  .td-strategy{color:var(--ink-light);font-size:0.76rem;line-height:1.5;}
+  .td-actions{width:80px;text-align:right;white-space:nowrap;}
+  .icon-btn{background:none;border:none;cursor:pointer;font-size:0.9rem;padding:4px 5px;border-radius:6px;transition:background 0.15s;opacity:0.5;}
+  .icon-btn:hover{opacity:1;background:#f0ebe3;}
+  .icon-btn.del:hover{background:#fdeaea;}
+  .overnight-badge{display:inline-block;font-size:0.62rem;background:#e8e0f0;color:#7060a0;border-radius:6px;padding:1px 6px;margin-left:5px;vertical-align:middle;font-family:'Noto Sans KR',sans-serif;font-weight:600;}
+  .storage-status{font-size:0.72rem;color:var(--ink-light);text-align:right;margin:-6px 4px 10px;}
+
+  /* MODAL */
+  .modal-overlay{display:none;position:fixed;inset:0;background:rgba(58,50,40,0.45);z-index:100;align-items:center;justify-content:center;backdrop-filter:blur(3px);}
+  .modal-overlay.open{display:flex;}
+  .modal{background:var(--cream);border-radius:20px;padding:28px 30px;width:min(520px,95vw);box-shadow:0 8px 40px rgba(58,50,40,0.25);animation:modalIn 0.22s ease;max-height:92vh;overflow-y:auto;position:relative;}
+  .modal-x{position:absolute;top:14px;right:14px;width:32px;height:32px;border:none;border-radius:50%;background:#f0ebe3;color:var(--ink-light);font-size:1rem;cursor:pointer;line-height:1;transition:background 0.15s,color 0.15s;}
+  .modal-x:hover{background:var(--danger);color:#fff;}
+  .cloud-desc{font-size:0.78rem;color:var(--ink-light);line-height:1.6;margin-bottom:14px;}
+  .cloud-hint{display:block;font-size:0.68rem;color:#a89a88;margin-top:4px;}
+  .cloud-status{font-size:0.76rem;padding:8px 12px;border-radius:8px;background:#f0ebe3;color:var(--ink-light);margin:8px 0 14px;}
+  .cloud-status.ok{background:#e2eedc;color:#4a7a42;}
+  .cloud-status.err{background:#fbe3e3;color:var(--danger);}
+  .cloud-btns{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;}
+  .cloud-sql summary{cursor:pointer;font-size:0.78rem;color:var(--gold);font-weight:700;}
+  .cloud-sql pre{background:#2a2620;color:#e8e0d4;font-size:0.68rem;padding:12px;border-radius:8px;overflow-x:auto;margin:10px 0;line-height:1.5;white-space:pre-wrap;word-break:break-all;}
+  @keyframes modalIn{from{opacity:0;transform:scale(0.95) translateY(10px)}to{opacity:1;transform:scale(1) translateY(0)}}
+  .modal h3{font-family:'Playfair Display',serif;font-size:1.15rem;margin-bottom:18px;}
+
+  /* TIME PICKER */
+  .time-pickers-row{display:flex;gap:16px;align-items:flex-start;margin-bottom:14px;}
+  .time-picker-group{flex:1;}
+  .time-picker-group label{display:block;font-size:0.72rem;font-weight:600;letter-spacing:0.08em;color:var(--ink-light);margin-bottom:5px;text-transform:uppercase;}
+  .time-picker-box{background:white;border:1.5px solid #e0d8cc;border-radius:12px;padding:10px 12px;transition:border-color 0.2s;display:flex;align-items:center;gap:6px;}
+  .time-picker-box:focus-within{border-color:var(--gold);}
+  .tp-col{display:flex;flex-direction:column;align-items:center;gap:3px;}
+  .tp-val{font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:700;color:var(--ink);min-width:42px;text-align:center;line-height:1;}
+  .tp-btn{background:#f5f0e8;border:none;border-radius:6px;width:32px;height:22px;cursor:pointer;font-size:0.7rem;color:var(--ink-light);display:flex;align-items:center;justify-content:center;transition:background 0.15s;}
+  .tp-btn:hover{background:#ece3d5;color:var(--ink);}
+  .tp-btn:active{background:#e0d8c8;}
+  .tp-sep{font-family:'Playfair Display',serif;font-size:1.4rem;color:#c0b8a8;margin:0 2px;align-self:center;}
+
+  /* overnight preview */
+  .overnight-preview{display:none;font-size:0.75rem;background:#f0ecf8;color:#7060a0;border-radius:8px;padding:7px 12px;margin-bottom:10px;line-height:1.6;}
+  .overnight-preview.show{display:block;}
+
+  .form-row{display:flex;gap:12px;}
+  .form-row .form-group{flex:1;}
+  .form-group{margin-bottom:14px;}
+  .form-group label{display:block;font-size:0.72rem;font-weight:600;letter-spacing:0.08em;color:var(--ink-light);margin-bottom:5px;text-transform:uppercase;}
+  .form-group input,.form-group textarea{width:100%;border:1.5px solid #e0d8cc;border-radius:9px;padding:9px 13px;font-family:'Noto Sans KR',sans-serif;font-size:0.84rem;background:white;color:var(--ink);outline:none;transition:border-color 0.2s;resize:vertical;}
+  .form-group input:focus,.form-group textarea:focus{border-color:var(--gold);}
+  .form-group input[type=color]{padding:4px 8px;height:38px;cursor:pointer;}
+
+  .error-msg{font-size:0.72rem;color:var(--danger);margin-top:4px;display:none;}
+  .error-msg.show{display:block;}
+  .collision-warn{font-size:0.72rem;color:var(--danger);background:#fdeaea;border-radius:8px;padding:6px 10px;margin-bottom:10px;display:none;}
+  .collision-warn.show{display:block;}
+  .collision-warn.info{color:#7060a0;background:#f0ecf8;}
+  .modal-btns{display:flex;gap:8px;justify-content:space-between;align-items:center;margin-top:18px;flex-wrap:wrap;}
+  .modal-btns-right{display:flex;gap:8px;}
+  .mode-menu{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:50;background:#ffffffeb;border:1px solid #e6dccd;border-radius:18px;box-shadow:0 8px 30px rgba(58,50,40,0.18);padding:8px;display:flex;gap:6px;backdrop-filter:blur(8px);}
+  .mode-btn{min-width:118px;border:none;border-radius:12px;background:#f5f0e8;color:var(--ink-light);font-family:'Noto Sans KR',sans-serif;font-size:0.8rem;font-weight:700;padding:10px 12px;cursor:pointer;transition:all 0.2s;white-space:nowrap;}
+  .mode-btn:hover{background:#ece3d5;color:var(--ink);}
+  .mode-btn.active{background:var(--ink);color:var(--cream);}
+  .print-sheet{display:none;}
+
+  @media print{
+    @page{size:A4 portrait;margin:0;}
+    *{box-shadow:none!important;text-shadow:none!important;}
+    html,body{background:white!important;color:#222!important;}
+    body>*:not(.print-sheet){display:none!important;}
+    .print-sheet{display:block!important;width:210mm;height:297mm;margin:0!important;padding:0!important;color:#222;}
+    .print-page-img{display:block;width:210mm;height:297mm;margin:0;padding:0;}
+    .print-head{border-bottom:2px solid #222;padding-bottom:8mm;margin-bottom:7mm;display:flex;justify-content:space-between;align-items:flex-end;gap:12mm;}
+    .print-title{font-family:'Noto Serif KR',serif;font-size:22pt;font-weight:700;line-height:1.15;}
+    .print-sub{font-size:9pt;color:#666;margin-top:2mm;}
+    .print-meta{text-align:right;font-size:8.5pt;color:#555;line-height:1.6;white-space:nowrap;}
+    .print-section{margin-bottom:7mm;break-inside:avoid;}
+    .print-section h2{font-family:'Noto Serif KR',serif;font-size:12pt;margin:0 0 3mm;border-left:4px solid #c8a96e;padding-left:3mm;}
+    .print-goals{display:flex;flex-wrap:wrap;gap:2mm;margin:0;padding:0;list-style:none;}
+    .print-goals li{border:1px solid #d8d0c4;border-radius:999px;padding:1.5mm 3.5mm;font-size:9pt;background:#fbfaf8;}
+    .print-empty{font-size:9pt;color:#777;font-style:italic;}
+    .print-clock-wrap{display:flex;align-items:center;gap:8mm;border:1px solid #ded7cc;border-radius:4mm;padding:4mm;background:#fbfaf8;break-inside:avoid;}
+    .print-clock-img{width:68mm;height:68mm;object-fit:contain;flex:0 0 auto;}
+    .print-clock-info{font-size:9pt;line-height:1.65;color:#444;}
+    .print-clock-info strong{display:block;font-family:'Noto Serif KR',serif;font-size:12pt;color:#222;margin-bottom:2mm;}
+    .print-table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:8.8pt;}
+    .print-table th{background:#3a3228!important;color:white!important;padding:2.8mm 2.4mm;text-align:left;font-weight:600;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+    .print-table td{border-bottom:1px solid #ddd;padding:2.4mm;vertical-align:top;line-height:1.45;}
+    .print-table tr{break-inside:avoid;}
+    .print-table .p-icon{width:10mm;text-align:center;font-size:12pt;}
+    .print-table .p-time{width:31mm;font-weight:700;white-space:nowrap;}
+    .print-table .p-task{width:43mm;font-weight:600;}
+    .print-table .p-color{display:inline-block;width:3mm;height:3mm;border-radius:50%;margin-right:1.5mm;vertical-align:middle;border:1px solid #bbb;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+    .print-table .p-strategy{color:#444;}
+  }
+
+  /* CATEGORY BADGE */
+  .td-cat{width:64px;text-align:center;white-space:nowrap;}
+  .cat-badge{display:inline-flex;flex-direction:column;align-items:center;gap:1px;padding:3px 6px;border-radius:8px;font-size:0.58rem;font-weight:700;letter-spacing:0.03em;line-height:1.2;min-width:46px;}
+  .cat-badge .cat-icon{font-size:1rem;line-height:1;}
+  .cat-sleep {background:#e2eedc;color:#4a7a42;}
+  .cat-rest  {background:#fde8d8;color:#a05a30;}
+  .cat-input {background:#dde8f8;color:#3060a0;}
+  .cat-output{background:#f0e0f8;color:#7040a0;}
+  .cat-inout {background:#e0f0e8;color:#30806a;}
+  .cat-exercise{background:#fff0d0;color:#9a6010;}
+
+  /* DONE ROW */
+  tbody tr.done-row td{background:#f0f8ec!important;opacity:0.72;}
+  tbody tr.done-row .td-task{text-decoration:line-through;color:var(--ink-light);}
+  tbody tr.done-row .td-cat .cat-badge{opacity:0.5;}
+
+  /* CHECK COLUMN */
+  .td-check{width:44px;text-align:center;}
+  .check-btn{width:28px;height:28px;border-radius:50%;border:2px solid #c8bfb4;background:white;cursor:pointer;font-size:0.9rem;display:inline-flex;align-items:center;justify-content:center;transition:all 0.18s;flex-shrink:0;}
+  .check-btn:hover{border-color:var(--gold);background:#fdf6ea;}
+  .check-btn.checked{background:#6ab06a;border-color:#5a9a5a;color:white;}
+
+  /* DATE NAV */
+  .date-nav{display:flex;align-items:center;justify-content:space-between;background:white;border-radius:14px;padding:10px 16px;box-shadow:0 2px 10px var(--shadow);margin-bottom:12px;}
+  .date-nav-btns{display:flex;gap:6px;}
+  .date-nav-btn{background:#f5f0e8;border:none;border-radius:9px;padding:6px 14px;font-size:0.78rem;font-weight:600;cursor:pointer;color:var(--ink-light);font-family:'Noto Sans KR',sans-serif;transition:all 0.15s;}
+  .date-nav-btn:hover{background:#ece3d5;color:var(--ink);}
+  .date-nav-btn.today{background:var(--ink);color:var(--cream);}
+  .date-nav-center{text-align:center;}
+  .date-nav-main{font-family:'Noto Serif KR',serif;font-size:1rem;font-weight:600;}
+  .date-nav-sub{font-size:0.7rem;color:var(--ink-light);margin-top:1px;}
+  .date-progress-mini{font-size:0.7rem;color:var(--gold);font-weight:600;margin-top:2px;}
+
+  /* CATEGORY SELECTOR in modal */
+  .cat-selector{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;}
+  .cat-opt{display:flex;align-items:center;gap:4px;padding:5px 10px;border-radius:8px;border:1.5px solid #e0d8cc;background:white;cursor:pointer;font-size:0.76rem;font-weight:600;font-family:'Noto Sans KR',sans-serif;transition:all 0.15s;}
+  .cat-opt:hover{border-color:var(--gold);}
+  .cat-opt.selected{border-color:var(--ink);background:var(--ink);color:var(--cream);}
+
+  @media(max-width:600px){
+    .clock-container,#clockCanvas,.current-task-banner{width:300px;height:300px;}
+    #clockCanvas{width:300px;height:300px;}
+    .header-title{font-size:1.5rem;}
+    .time-pickers-row{flex-direction:column;gap:10px;}
+    .storage-status{text-align:left;}
+    .mode-menu{width:calc(100vw - 24px);bottom:10px;}
+    .mode-btn{flex:1;min-width:0;padding:9px 8px;font-size:0.78rem;}
+    thead th:nth-child(4),tbody td:nth-child(4){display:none;}
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="header-title">Dr. Bugeon의 학습계획표</div>
+  <div class="header-sub"><span class="mode-pill" id="modeHeading">학기중-수업</span>Study Plan · Reja Jadvali</div>
+</header>
+<section class="print-sheet" id="printSheet"></section>
+<div class="main-wrap">
+  <div class="progress-section" id="progressSection"></div>
+
+  <div class="goals-section">
+    <div class="goals-header">
+      <div class="goals-title">🎯 오늘의 공부 목표</div>
+      <div class="goals-date" id="goalsDate"></div>
+    </div>
+    <div class="goals-input-wrap">
+      <textarea class="goals-textarea" id="goalsInput" rows="2"
+        placeholder="오늘의 목표를 입력하고 Enter ↵&#10;예) UWorld 40문제, Pathology Ch.5, Anki 100장"></textarea>
+      <button class="goals-save-btn" onclick="addGoal()">저장 ↵</button>
+    </div>
+    <div class="goals-tags" id="goalsTags"></div>
+  </div>
+
+  <div class="clock-section">
+    <div class="clock-container">
+      <canvas id="clockCanvas" width="760" height="760"></canvas>
+      <div class="clock-center-info">
+        <div class="clock-time-now" id="clockTimeDisplay">--:--</div>
+        <div class="clock-label-now">현재 시각</div>
+      </div>
+    </div>
+    <div class="current-task-banner" id="currentTaskBanner"></div>
+  </div>
+
+  <div class="toolbar">
+    <div class="toolbar-title">📋 일정 목록</div>
+    <div class="toolbar-btns">
+      <button class="btn btn-reset" onclick="resetSchedule()">↺ 초기화</button>
+      <button class="btn btn-reset" onclick="exportData()">⬇ 백업 저장</button>
+      <button class="btn btn-reset" onclick="document.getElementById('importFile').click()">⬆ 백업 불러오기</button>
+      <button class="btn btn-reset" onclick="printA4()">🖨 A4 출력</button>
+      <button class="btn btn-reset" onclick="openCloudModal()">☁ 클라우드</button>
+      <button class="btn btn-add" onclick="openAddModal()">＋ 시간대 추가</button>
+      <input type="file" id="importFile" accept="application/json,.json" style="display:none" onchange="importDataFromFile(this)">
+    </div>
+  </div>
+  <div class="storage-status" id="storageStatus">브라우저에 자동 저장됩니다.</div>
+
+  <!-- DATE NAV -->
+  <div class="date-nav" id="dateNav">
+    <div class="date-nav-btns">
+      <button class="date-nav-btn" onclick="shiftDate(-1)">◀ 이전</button>
+    </div>
+    <div class="date-nav-center">
+      <div class="date-nav-main" id="dateNavMain">—</div>
+      <div class="date-nav-sub"  id="dateNavSub">—</div>
+      <div class="date-progress-mini" id="dateNavProgress"></div>
+    </div>
+    <div class="date-nav-btns">
+      <button class="date-nav-btn today" onclick="goToday()">오늘</button>
+      <button class="date-nav-btn" onclick="shiftDate(1)">다음 ▶</button>
+    </div>
+  </div>
+
+  <div class="schedule-table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>구분</th>
+          <th>시간대</th>
+          <th>활동 내용</th>
+          <th>핵심 전략</th>
+          <th>✓</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="scheduleBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<nav class="mode-menu" aria-label="시간표 모드">
+  <button class="mode-btn" data-mode="semester" onclick="switchMode('semester')">학기중-수업</button>
+  <button class="mode-btn" data-mode="holiday" onclick="switchMode('holiday')">휴일 및 공강</button>
+  <button class="mode-btn" data-mode="vacation" onclick="switchMode('vacation')">방학 중</button>
+</nav>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <button class="modal-x" onclick="closeModal()" aria-label="닫기" title="닫기">✕</button>
+    <h3 id="modalTitle">시간대 수정</h3>
+
+    <div class="time-pickers-row">
+      <div class="time-picker-group">
+        <label>시작 시간</label>
+        <div class="time-picker-box" id="startPickerBox"></div>
+      </div>
+      <div style="align-self:center;padding-top:22px;font-size:1.2rem;color:var(--ink-light);">→</div>
+      <div class="time-picker-group">
+        <label>종료 시간</label>
+        <div class="time-picker-box" id="endPickerBox"></div>
+      </div>
+    </div>
+
+    <div class="overnight-preview" id="overnightPreview"></div>
+    <div class="collision-warn" id="collisionWarn"></div>
+
+    <div class="form-group">
+      <label>이모지 아이콘</label>
+      <input type="text" id="editIcon" maxlength="2" placeholder="📖">
+    </div>
+    <div class="form-group">
+      <label>구분 (카테고리)</label>
+      <div class="cat-selector" id="catSelector"></div>
+    </div>
+    <div class="form-group">
+      <label>짧은 라벨 (시계 표시용)</label>
+      <input type="text" id="editLabel" maxlength="8" placeholder="오전학습">
+    </div>
+    <div class="form-group">
+      <label>활동 내용 (Task)</label>
+      <input type="text" id="editTask" placeholder="오전 집중 학습">
+    </div>
+    <div class="form-group">
+      <label>핵심 전략 (Strategy)</label>
+      <textarea id="editStrategy" rows="3"></textarea>
+    </div>
+    <div class="error-msg" id="timeError"></div>
+    <div class="modal-btns">
+      <button class="btn btn-danger" id="deleteBtn" onclick="deleteBlock()" style="display:none">🗑 삭제</button>
+      <div class="modal-btns-right">
+        <button class="btn btn-cancel" onclick="closeModal()">취소</button>
+        <button class="btn btn-save" onclick="saveModal()">저장</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ☁ CLOUD SYNC MODAL -->
+<div class="modal-overlay" id="cloudOverlay">
+  <div class="modal">
+    <button class="modal-x" onclick="closeCloudModal()" aria-label="닫기" title="닫기">✕</button>
+    <h3>☁ Supabase 클라우드 동기화</h3>
+    <p class="cloud-desc">기기 간에 일정·목표를 동기화합니다. 입력값은 이 브라우저에만 저장되며 외부로 전송되지 않습니다.</p>
+
+    <div class="form-group">
+      <label>Supabase Project URL</label>
+      <input type="text" id="sbUrl" placeholder="https://xxxxx.supabase.co" autocomplete="off">
+    </div>
+    <div class="form-group">
+      <label>Supabase anon (public) key</label>
+      <input type="text" id="sbKey" placeholder="eyJhbGci..." autocomplete="off">
+    </div>
+    <div class="form-group">
+      <label>동기화 ID (기기 공통 식별자)</label>
+      <input type="text" id="sbDevice" placeholder="예: bugeon-laptop 또는 임의 문자열" autocomplete="off">
+      <span class="cloud-hint">여러 기기에서 같은 ID를 쓰면 데이터가 공유됩니다.</span>
+    </div>
+
+    <div class="cloud-status" id="cloudStatus">연결 안 됨</div>
+
+    <div class="cloud-btns">
+      <button class="btn btn-reset" onclick="cloudConnect()">🔌 연결/저장 후 동기화</button>
+      <button class="btn btn-reset" onclick="cloudAutoSync()">🔄 병합 동기화</button>
+      <button class="btn btn-reset" onclick="cloudPush()">📌 이 기기를 최종본으로 올리기</button>
+      <button class="btn btn-reset" onclick="cloudPull()">⬇ 클라우드 최종본 받기</button>
+      <button class="btn btn-danger" onclick="cloudDisconnect()">연결 해제</button>
+    </div>
+
+    <details class="cloud-sql">
+      <summary>📋 Supabase 테이블 SQL (최초 1회 실행)</summary>
+      <pre id="sqlSnippet"></pre>
+      <button class="btn btn-reset" onclick="copySQL()">SQL 복사</button>
+    </details>
+  </div>
+</div>
+
+<script>
+const LEGACY_SCHEDULE_KEY='study_plan_v5', LEGACY_GOALS_KEY='study_goals_v1', ACTIVE_MODE_KEY='study_plan_active_mode_v1';
+const CHECKS_KEY='study_plan_checks_v1';  // {dateStr: {blockKey: checkRecord}}
+const TOMBSTONES_KEY='study_plan_tombstones_v1';
+const LAST_CANONICAL_KEY='study_plan_last_canonical_v1';
+const DEVICE_INSTANCE_KEY='study_plan_device_instance_v1';
+const MODE_CONFIG={
+  semester:{label:'학기중-수업'},
+  holiday:{label:'휴일 및 공강'},
+  vacation:{label:'방학 중'}
+};
+const CATEGORIES=[
+  {id:'sleep',    icon:'🛌', label:'수면',       cls:'cat-sleep'},
+  {id:'rest',     icon:'☕', label:'휴식',       cls:'cat-rest'},
+  {id:'exercise', icon:'🏃', label:'운동',       cls:'cat-exercise'},
+  {id:'input',    icon:'📥', label:'인풋',       cls:'cat-input'},
+  {id:'output',   icon:'📤', label:'아웃풋',     cls:'cat-output'},
+  {id:'inout',    icon:'🔄', label:'인풋+아웃풋',cls:'cat-inout'},
+];
+const DAYS=['일','월','화','수','목','금','토'];
+// 카테고리 → 블록 색상 자동 매핑 (color picker 제거 후 사용)
+const CAT_COLOR={sleep:'#d4e6d0',rest:'#f0ddd0',exercise:'#c5d9d0',input:'#c8d0e8',output:'#dfc5d0',inout:'#b8d0d8'};
+function colorForCat(id){ return CAT_COLOR[id]||'#c8a96e'; }
+const PALETTE=['#d4e6d0','#f5dcc8','#c9c4d8','#f0ddd0','#c5d9d0','#b8d0d8','#dfc5d0','#e8d5c0','#d0d8c0','#c8d0e8','#e8c8d0','#d8e8c8'];
+
+function nowIso(){ return new Date().toISOString(); }
+function stableHash(value){
+  let h=2166136261;
+  const str=String(value||'');
+  for(let i=0;i<str.length;i++){ h^=str.charCodeAt(i); h=Math.imul(h,16777619); }
+  return (h>>>0).toString(36);
+}
+function randomPart(){
+  if(window.crypto&&crypto.getRandomValues){
+    const a=new Uint32Array(2); crypto.getRandomValues(a);
+    return Array.from(a,n=>n.toString(36)).join('');
+  }
+  return Math.random().toString(36).slice(2)+Date.now().toString(36);
+}
+function newId(prefix){ return `${prefix}_${Date.now().toString(36)}_${randomPart()}`; }
+function deviceInstanceId(){
+  let id=localStorage.getItem(DEVICE_INSTANCE_KEY);
+  if(!id){ id=newId('device'); localStorage.setItem(DEVICE_INSTANCE_KEY,id); }
+  return id;
+}
+function legacyBlockId(raw,i,mode=currentMode){
+  return `schedule_${mode}_${stableHash([raw.start,raw.end,raw.task||raw.label||'',i].join('|'))}`;
+}
+function normalizeScheduleBlock(raw,i=0,mode=currentMode){
+  const ts=raw.updated_at||raw.created_at||nowIso();
+  const cat=CATEGORIES.some(c=>c.id===raw.category)?raw.category:'input';
+  return {
+    id:raw.id||legacyBlockId(raw,i,mode),
+    created_at:raw.created_at||ts,
+    updated_at:raw.updated_at||ts,
+    deleted_at:raw.deleted_at||null,
+    start:Number(raw.start),
+    end:Number(raw.end),
+    icon:String(raw.icon||'📌').trim().slice(0,4)||'📌',
+    task:String(raw.task||raw.label||`블록${i+1}`).trim(),
+    strategy:String(raw.strategy||'').trim(),
+    color:safeColor(raw.color||colorForCat(cat)),
+    label:String(raw.label||raw.task||`블록${i+1}`).trim().slice(0,8)||`블록${i+1}`,
+    category:cat
+  };
+}
+function normalizeScheduleList(items,mode=currentMode){
+  return (Array.isArray(items)?items:[]).map((b,i)=>normalizeScheduleBlock(b,i,mode)).filter(b=>!b.deleted_at);
+}
+function touchScheduleBlock(block,ts=nowIso()){
+  return normalizeScheduleBlock({...block,updated_at:ts,deleted_at:null},0,currentMode);
+}
+function goalText(g){ return typeof g==='string'?g:String(g&&g.text||''); }
+function normalizeGoalRecord(raw,i=0,mode=currentMode){
+  if(typeof raw==='string'){
+    const text=raw.trim(); const ts=nowIso();
+    return {id:`goal_${mode}_${stableHash(text+'|'+i)}`,text,created_at:ts,updated_at:ts,deleted_at:null};
+  }
+  const text=goalText(raw).trim();
+  const ts=raw.updated_at||raw.created_at||nowIso();
+  return {id:raw.id||`goal_${mode}_${stableHash(text+'|'+i)}`,text,created_at:raw.created_at||ts,updated_at:raw.updated_at||ts,deleted_at:raw.deleted_at||null};
+}
+function normalizeGoalsList(items,mode=currentMode){
+  return (Array.isArray(items)?items:[]).map((g,i)=>normalizeGoalRecord(g,i,mode)).filter(g=>g.text&&!g.deleted_at);
+}
+function loadTombstones(){
+  try{ return JSON.parse(localStorage.getItem(TOMBSTONES_KEY))||[]; }catch{ return []; }
+}
+function saveTombstones(rows){
+  try{ localStorage.setItem(TOMBSTONES_KEY,JSON.stringify(rows)); }catch(e){}
+}
+function addTombstone(type,mode,record,ts=nowIso()){
+  if(!record||!record.id) return;
+  const rows=loadTombstones().filter(r=>r.id!==record.id);
+  let payload={...record};
+  if(type==='schedule') payload={start:record.start,end:record.end,icon:record.icon,task:record.task,strategy:record.strategy,color:record.color,label:record.label,category:record.category};
+  if(type==='goal') payload={text:goalText(record)};
+  if(type==='check') payload={date:record.date,block_id:record.block_id,checked:!!record.checked};
+  rows.push({id:record.id,sync_id:'',type,mode,payload,created_at:record.created_at||ts,updated_at:ts,deleted_at:ts});
+  saveTombstones(rows);
+}
+function getLastCanonical(syncId){
+  try{ const all=JSON.parse(localStorage.getItem(LAST_CANONICAL_KEY))||{}; return all[syncId]||''; }catch{ return ''; }
+}
+function setLastCanonical(syncId,value){
+  try{ const all=JSON.parse(localStorage.getItem(LAST_CANONICAL_KEY))||{}; all[syncId]=value||''; localStorage.setItem(LAST_CANONICAL_KEY,JSON.stringify(all)); }catch(e){}
+}
+
+const DEFAULT_SCHEDULE=[
+  {start:0,   end:6,   icon:'🛏️',task:'수면 (Consolidation)',    strategy:'[기억 공고화] 뇌가 정보를 장기 기억으로 이동',          color:'#d4e6d0',label:'수면',    category:'sleep'},
+  {start:6,   end:8,   icon:'⏰', task:'기상 및 6분 이내 착석',   strategy:'[인출] 전날 가장 고통스러웠던 Anki/오답 복기',          color:'#f5dcc8',label:'기상',    category:'output'},
+  {start:8,   end:12,  icon:'📖', task:'오전 집중 학습',          strategy:'[인강+인출] 인강 시청 후 즉시 UWorld 1블록 풀이',        color:'#c9c4d8',label:'오전학습',category:'inout'},
+  {start:12,  end:13,  icon:'🍽️',task:'점심 식사 및 인출',       strategy:'[휴식] 완전한 뇌의 이완 후 5분 인출',                   color:'#f0ddd0',label:'점심',    category:'rest'},
+  {start:13,  end:15,  icon:'🏃', task:'운동 및 운동 중 인출',    strategy:'[리프레시] 헬스장에서 운동 및 공부한 내용 떠올리기',     color:'#c5d9d0',label:'운동',    category:'exercise'},
+  {start:15,  end:18,  icon:'📚', task:'오후 심화 학습',          strategy:'[인풋+프레이밍] 부족 파트 FA 읽기 및 구조화 지도 작성', color:'#b8d0d8',label:'오후학습',category:'inout'},
+  {start:18,  end:23,  icon:'📋', task:'저녁 보충 학습 및 단권화',strategy:'[단권화] 오답 관련 Anki 등록 및 취약 과목 보충',        color:'#dfc5d0',label:'저녁학습',category:'output'},
+  {start:23,  end:24,  icon:'📝', task:'하루 정리',               strategy:"[정리] 내일 공부할 '한 줄 지침' 정하기",                color:'#e8d5c0',label:'정리',    category:'output'},
+];
+
+function scheduleKey(mode=currentMode){ return mode==='semester' ? LEGACY_SCHEDULE_KEY : `${LEGACY_SCHEDULE_KEY}_${mode}`; }
+function goalsKey(mode=currentMode){ return mode==='semester' ? LEGACY_GOALS_KEY : `${LEGACY_GOALS_KEY}_${mode}`; }
+function defaultSchedule(mode=currentMode){ return normalizeScheduleList(DEFAULT_SCHEDULE.map(s=>({...s})),mode); }
+function loadSchedule(mode){
+  try{
+    const saved=JSON.parse(localStorage.getItem(scheduleKey(mode)));
+    return saved&&saved.length ? normalizeScheduleList(saved,mode) : defaultSchedule(mode);
+  }catch{return defaultSchedule(mode);}
+}
+function loadGoals(mode){
+  try{return normalizeGoalsList(JSON.parse(localStorage.getItem(goalsKey(mode)))||[],mode);}
+  catch{return [];}
+}
+
+let currentMode=localStorage.getItem(ACTIVE_MODE_KEY)||'semester';
+if(!MODE_CONFIG[currentMode]) currentMode='semester';
+let schedule=loadSchedule(currentMode), goals=loadGoals(currentMode);
+
+// ─── DATE & CHECK STATE ───────────────────────────────
+function todayStr(){ const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+function dateKey(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+// blockKey: stable identity for a schedule entry (start+task hash)
+function blockKey(s){ return s&&s.id ? s.id : `${Math.round(s.start*100)}_${String(s.task||'').slice(0,12)}`; }
+let viewDate=new Date();  viewDate.setHours(0,0,0,0);
+function normalizeCheckRecord(value,dk,bk){
+  const ts=(value&&value.updated_at)||(value&&value.created_at)||nowIso();
+  const checked=typeof value==='boolean'?value:!!(value&&value.checked);
+  return {
+    id:(value&&value.id)||`check_${currentMode}_${stableHash(dk+'|'+bk)}`,
+    mode:(value&&value.mode)||currentMode,
+    date:(value&&value.date)||dk,
+    block_id:(value&&value.block_id)||bk,
+    checked,
+    created_at:(value&&value.created_at)||ts,
+    updated_at:(value&&value.updated_at)||ts,
+    deleted_at:(value&&value.deleted_at)||null
+  };
+}
+function loadAllChecks(){
+  try{
+    const raw=JSON.parse(localStorage.getItem(CHECKS_KEY))||{};
+    Object.keys(raw).forEach(dk=>{
+      Object.keys(raw[dk]||{}).forEach(bk=>{ raw[dk][bk]=normalizeCheckRecord(raw[dk][bk],dk,bk); });
+    });
+    return raw;
+  }catch{ return {}; }
+}
+function saveAllChecks(all){
+  try{ localStorage.setItem(CHECKS_KEY,JSON.stringify(all)); queueAutoSync(); }catch(e){}
+}
+function getDateChecks(d){ const all=loadAllChecks(); return all[dateKey(d)]||{}; }
+function toggleCheck(s){
+  const all=loadAllChecks(); const dk=dateKey(viewDate); const bk=blockKey(s); const ts=nowIso();
+  if(!all[dk]) all[dk]={};
+  const current=all[dk][bk] ? normalizeCheckRecord(all[dk][bk],dk,bk) : normalizeCheckRecord({checked:false},dk,bk);
+  const nextChecked=!(current.checked&&!current.deleted_at);
+  all[dk][bk]={...current,checked:nextChecked,updated_at:ts,deleted_at:nextChecked?null:ts};
+  saveAllChecks(all);
+  renderTable(); updateDateNav();
+}
+function isDone(s){
+  const ch=getDateChecks(viewDate)[blockKey(s)];
+  return typeof ch==='boolean' ? ch : !!(ch&&ch.checked&&!ch.deleted_at);
+}
+// Keep tombstones so a deleted or unchecked state can reach other devices.
+function pruneOldChecks(){ saveAllChecks(loadAllChecks()); }
+
+function setStorageStatus(msg){
+  const el=document.getElementById('storageStatus');
+  if(!el) return;
+  const now=new Date();
+  const hh=String(now.getHours()).padStart(2,'0');
+  const mm=String(now.getMinutes()).padStart(2,'0');
+  el.textContent=`${MODE_CONFIG[currentMode].label} · ${msg} · ${hh}:${mm}`;
+}
+function saveSchedule(){
+  try{
+    schedule=normalizeScheduleList(schedule,currentMode);
+    localStorage.setItem(scheduleKey(),JSON.stringify(schedule));
+    localStorage.setItem(ACTIVE_MODE_KEY,currentMode);
+    setStorageStatus('일정이 브라우저에 저장됨');
+    queueAutoSync();
+  }catch(e){alert('브라우저 저장에 실패했습니다. 저장 공간이나 브라우저 설정을 확인해주세요.');}
+}
+function saveGoals(){
+  try{
+    goals=normalizeGoalsList(goals,currentMode);
+    localStorage.setItem(goalsKey(),JSON.stringify(goals));
+    localStorage.setItem(ACTIVE_MODE_KEY,currentMode);
+    setStorageStatus('목표가 브라우저에 저장됨');
+    queueAutoSync();
+  }catch(e){alert('브라우저 저장에 실패했습니다. 저장 공간이나 브라우저 설정을 확인해주세요.');}
+}
+function sortSchedule(){schedule.sort((a,b)=>a.start-b.start);}
+function updateModeUI(){
+  document.getElementById('modeHeading').textContent=MODE_CONFIG[currentMode].label;
+  document.querySelectorAll('.mode-btn').forEach(btn=>btn.classList.toggle('active',btn.dataset.mode===currentMode));
+  document.querySelector('.toolbar-title').textContent=`📋 ${MODE_CONFIG[currentMode].label} 일정 목록`;
+}
+function switchMode(mode){
+  if(!MODE_CONFIG[mode]||mode===currentMode) return;
+  closeModal();
+  currentMode=mode;
+  localStorage.setItem(ACTIVE_MODE_KEY,currentMode);
+  schedule=loadSchedule(currentMode);
+  goals=loadGoals(currentMode);
+  sortSchedule();
+  updateModeUI();
+  updateGoalsDate();
+  renderGoals();
+  renderTable();
+  updateUI();
+  setStorageStatus('시간표 프레임 전환됨');
+  queueAutoSync();
+}
+function escapeHTML(value){
+  return String(value).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+}
+function safeColor(color){
+  return /^#[0-9a-f]{6}$/i.test(color) ? color : '#c8a96e';
+}
+
+// ─── TIME HELPERS ──────────────────────────────────────
+function hToStr(h){
+  const t=Math.max(0,Math.min(24*60,Math.round(h*60)));
+  const hh=Math.floor(t/60), mm=t%60;
+  return `${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}`;
+}
+function isOvernight(seg){ return seg.end < seg.start; }
+function segDuration(seg){ return isOvernight(seg) ? (24-seg.start)+seg.end : seg.end-seg.start; }
+
+// ─── COLLISION (handles overnight) ─────────────────────
+// Expand a segment into one or two [s,e] intervals on a 0-24 number line.
+// For overnight: two intervals [start,24] and [0,end]
+function segIntervals(seg){
+  if(isOvernight(seg)) return [[seg.start,24],[0,seg.end]];
+  return [[seg.start,seg.end]];
+}
+function intervalsOverlap([a1,a2],[b1,b2]){ return a1<b2 && b1<a2; }
+function blocksCollide(a,b){
+  const ia=segIntervals(a), ib=segIntervals(b);
+  return ia.some(x=>ib.some(y=>intervalsOverlap(x,y)));
+}
+function validateBlocks(blocks){
+  const errs=[];
+  for(let i=0;i<blocks.length;i++){
+    const b=blocks[i];
+    if(!Number.isFinite(b.start)||!Number.isFinite(b.end)||b.start<0||b.start>24||b.end<0||b.end>24){
+      errs.push(`"${b.label}" 시간은 00:00부터 24:00 사이여야 합니다`);continue;
+    }
+    if(b.start===24){errs.push(`"${b.label}" 시작 시간은 24:00이 될 수 없습니다`);continue;}
+    if(b.start===b.end){errs.push(`"${b.label}" 시작=종료 (0시간)`);continue;}
+    for(let j=i+1;j<blocks.length;j++){
+      if(blocksCollide(b,blocks[j]))
+        errs.push(`"${b.label}" ↔ "${blocks[j].label}" 시간 겹침`);
+    }
+  }
+  return errs;
+}
+function findFreeGaps(){
+  const intervals=schedule.flatMap(segIntervals)
+    .filter(([s,e])=>Number.isFinite(s)&&Number.isFinite(e)&&s<e)
+    .sort((a,b)=>a[0]-b[0]);
+  const merged=[];
+  intervals.forEach(([s,e])=>{
+    if(!merged.length||s>merged[merged.length-1][1]) merged.push([s,e]);
+    else merged[merged.length-1][1]=Math.max(merged[merged.length-1][1],e);
+  });
+  const gaps=[]; let cursor=0;
+  merged.forEach(([s,e])=>{ if(s>cursor) gaps.push({start:cursor,end:s}); cursor=Math.max(cursor,e); });
+  if(cursor<24) gaps.push({start:cursor,end:24});
+  return gaps;
+}
+
+// ─── OVERLAP AUTO-RESOLVE (edited/added block wins) ───
+// Subtract a set of occupied [s,e] intervals from block b's own intervals,
+// returning leftover within-day pieces.
+function clipBlockAgainst(b, occupied){
+  let pieces=segIntervals(b).map(([s,e])=>({s,e}));
+  occupied.forEach(([os,oe])=>{
+    pieces=pieces.flatMap(p=>{
+      if(oe<=p.s||os>=p.e) return [p];            // no overlap
+      const out=[];
+      if(os>p.s) out.push({s:p.s,e:Math.min(os,p.e)});
+      if(oe<p.e) out.push({s:Math.max(oe,p.s),e:p.e});
+      return out.filter(x=>x.e-x.s>1e-9);
+    });
+  });
+  return pieces;
+}
+// Returns the OTHER blocks (excluding winnerIdx), with colliding ones trimmed
+// to the winner's edges and fully-covered ones dropped.
+function resolveOverlaps(list, winner, winnerIdx){
+  const occ=segIntervals(winner);
+  const result=[]; const ts=nowIso();
+  list.forEach((b,i)=>{
+    if(i===winnerIdx) return;
+    if(!blocksCollide(winner,b)){ result.push(b); return; }
+    const pieces=clipBlockAgainst(b,occ);
+    if(!pieces.length){ addTombstone('schedule',currentMode,b,ts); return; } // fully covered -> tombstone
+    pieces.sort((x,y)=>(y.e-y.s)-(x.e-x.s));        // keep largest leftover
+    result.push(touchScheduleBlock({...b,start:pieces[0].s,end:pieces[0].e},ts));
+  });
+  return result;
+}
+// Own-validity (range / zero-length) for a single block, overlap-agnostic.
+function blockSelfError(s,e){
+  if(!Number.isFinite(s)||!Number.isFinite(e)||s<0||s>24||e<0||e>24) return '시간은 00:00–24:00 사이여야 합니다';
+  if(s===24) return '시작 시간은 24:00이 될 수 없습니다';
+  if(s===e) return '시작과 종료 시간이 같습니다';
+  return '';
+}
+
+// ─── TIME PICKER ──────────────────────────────────────
+function buildTimePicker(boxId, initH, onChangeCb){
+  let H=Math.floor(initH), M=Math.round((initH%1)*60/15)*15;
+  function normalize(){
+    if(M>=60){M=0;H++;}
+    if(M<0){M=45;H--;}
+    H=Math.max(0,Math.min(24,H));
+    if(H===24) M=0;
+  }
+  normalize();
+
+  function val(){ return H+M/60; }
+  function render(){
+    const box=document.getElementById(boxId);
+    box.innerHTML=`
+      <div class="tp-col">
+        <button class="tp-btn" data-a="hu">▲</button>
+        <div class="tp-val" id="${boxId}_h">${String(H).padStart(2,'0')}</div>
+        <button class="tp-btn" data-a="hd">▼</button>
+      </div>
+      <div class="tp-sep">:</div>
+      <div class="tp-col">
+        <button class="tp-btn" data-a="mu">▲</button>
+        <div class="tp-val" id="${boxId}_m">${String(M).padStart(2,'0')}</div>
+        <button class="tp-btn" data-a="md">▼</button>
+      </div>`;
+    box.querySelectorAll('.tp-btn').forEach(b=>b.addEventListener('click',()=>{
+      const a=b.dataset.a;
+      if(a==='hu'){H=H>=24?0:H+1;}
+      else if(a==='hd'){H=H<=0?24:H-1;}
+      else if(a==='mu'){M+=15;}
+      else if(a==='md'){M-=15;}
+      normalize();
+      render(); onChangeCb();
+    }));
+    // click on value to type
+    [boxId+'_h',boxId+'_m'].forEach(id=>{
+      document.getElementById(id).addEventListener('click',()=>{
+        const which=id.endsWith('_h')?'h':'m';
+        const cur=which==='h'?H:M;
+        const raw=prompt(which==='h'?'시 입력 (0–24):':'분 입력 (0, 15, 30, 45):', cur);
+        if(raw===null) return;
+        const n=parseInt(raw);
+        if(which==='h'&&n>=0&&n<=24){H=n;}
+        else if(which==='m'&&[0,15,30,45].includes(n)){M=n;}
+        normalize();
+        render(); onChangeCb();
+      });
+    });
+  }
+  render();
+  return { getValue:val };
+}
+
+let pStart, pEnd, editingIdx=-1, isAdding=false;
+
+function liveCheck(){
+  if(!pStart||!pEnd) return;
+  const s=pStart.getValue(), e=pEnd.getValue();
+  const overnight=e<s;
+  const prev=document.getElementById('overnightPreview');
+  const warn=document.getElementById('collisionWarn');
+  if(s===e){warn.textContent='⚠ 시작과 종료 시간이 같습니다';warn.classList.remove('info');warn.classList.add('show');prev.classList.remove('show');return;}
+  if(overnight){
+    const dur=segDuration({start:s,end:e});
+    prev.innerHTML=`🌙 <b>야간 연속 블록</b> — ${hToStr(s)} 시작 → 다음날 ${hToStr(e)} 종료 (${Math.floor(dur)}시간 ${Math.round((dur%1)*60)}분)`;
+    prev.classList.add('show');
+  } else { prev.classList.remove('show'); }
+  const selfErr=blockSelfError(s,e);
+  if(selfErr){warn.textContent='⚠ '+selfErr;warn.classList.remove('info');warn.classList.add('show');return;}
+  const editedSeg={start:s,end:e};
+  const collides=schedule.some((b,i)=>(isAdding||i!==editingIdx)&&blocksCollide(editedSeg,b));
+  if(collides){warn.textContent='ℹ 겹치는 블록은 저장 시 자동으로 조정됩니다';warn.classList.add('info');warn.classList.add('show');}
+  else{warn.classList.remove('show');warn.classList.remove('info');}
+}
+
+// ─── CLOCK ────────────────────────────────────────────
+const canvas=document.getElementById('clockCanvas');
+const ctx=canvas.getContext('2d');
+const CX=380,CY=380,R=340;
+
+function drawSegment(seg){
+  if(isOvernight(seg)){
+    // Draw two arcs: start→24 and 0→end
+    [[seg.start,24],[0,seg.end]].forEach(([s,e])=>{
+      if(s>=e) return;
+      const sa=(s/24)*Math.PI*2-Math.PI/2;
+      const ea=(e/24)*Math.PI*2-Math.PI/2;
+      ctx.beginPath(); ctx.moveTo(CX,CY); ctx.arc(CX,CY,R,sa,ea); ctx.closePath();
+      ctx.fillStyle=seg.color+'ee'; ctx.fill();
+      ctx.strokeStyle='#f9f5ef'; ctx.lineWidth=2; ctx.stroke();
+    });
+  } else {
+    const sa=(seg.start/24)*Math.PI*2-Math.PI/2;
+    const ea=(seg.end  /24)*Math.PI*2-Math.PI/2;
+    ctx.beginPath(); ctx.moveTo(CX,CY); ctx.arc(CX,CY,R,sa,ea); ctx.closePath();
+    ctx.fillStyle=seg.color+'ee'; ctx.fill();
+    ctx.strokeStyle='#f9f5ef'; ctx.lineWidth=2; ctx.stroke();
+  }
+}
+
+function drawSegLabel(seg){
+  const dur=segDuration(seg); if(dur<0.5) return;
+  // For overnight, label midpoint wraps around
+  let midH;
+  if(isOvernight(seg)){
+    const total=dur; const half=total/2;
+    midH=(seg.start+half)%24;
+  } else { midH=(seg.start+seg.end)/2; }
+  const angle=(midH/24)*Math.PI*2-Math.PI/2;
+  const lx=CX+Math.cos(angle)*R*0.62, ly=CY+Math.sin(angle)*R*0.62;
+  ctx.save(); ctx.translate(lx,ly); ctx.rotate(angle+Math.PI/2);
+  ctx.fillStyle='#3a3228cc'; ctx.font='bold 18px Noto Sans KR,sans-serif';
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  seg.label.split(' ').forEach((w,i,arr)=>ctx.fillText(w,0,(i-(arr.length-1)/2)*22));
+  ctx.restore();
+}
+
+function drawClock(){
+  ctx.clearRect(0,0,760,760);
+  ctx.beginPath(); ctx.arc(CX,CY,R+10,0,Math.PI*2); ctx.fillStyle='#ece4d8'; ctx.fill();
+  schedule.forEach(drawSegment);
+
+  for(let h=0;h<24;h++){
+    const angle=(h/24)*Math.PI*2-Math.PI/2;
+    const isMajor=h%6===0;
+    ctx.beginPath();
+    ctx.moveTo(CX+Math.cos(angle)*(R+8),CY+Math.sin(angle)*(R+8));
+    ctx.lineTo(CX+Math.cos(angle)*(isMajor?R-18:R-8),CY+Math.sin(angle)*(isMajor?R-18:R-8));
+    ctx.strokeStyle=isMajor?'#8a7a6a':'#b8a898'; ctx.lineWidth=isMajor?2.5:1.2; ctx.stroke();
+    const lx=CX+Math.cos(angle)*(R-30), ly=CY+Math.sin(angle)*(R-30);
+    ctx.fillStyle=isMajor?'#3a3228':'#7a6e64';
+    ctx.font=isMajor?'bold 22px Playfair Display,serif':'16px Noto Sans KR';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(h===0?'00':String(h),lx,ly);
+  }
+  for(let q=0;q<96;q++){
+    if(q%4===0) continue;
+    const angle=(q/96)*Math.PI*2-Math.PI/2;
+    ctx.beginPath();
+    ctx.moveTo(CX+Math.cos(angle)*(R+4),CY+Math.sin(angle)*(R+4));
+    ctx.lineTo(CX+Math.cos(angle)*(R-3),CY+Math.sin(angle)*(R-3));
+    ctx.strokeStyle='#c8c0b0'; ctx.lineWidth=0.8; ctx.stroke();
+  }
+  schedule.forEach(drawSegLabel);
+
+  const now=new Date();
+  const na=((now.getHours()+now.getMinutes()/60+now.getSeconds()/3600)/24)*Math.PI*2-Math.PI/2;
+  ctx.save(); ctx.shadowColor='#c8a96e'; ctx.shadowBlur=12;
+  ctx.beginPath(); ctx.moveTo(CX,CY); ctx.lineTo(CX+Math.cos(na)*R,CY+Math.sin(na)*R);
+  ctx.strokeStyle='#c8a96e'; ctx.lineWidth=3; ctx.stroke(); ctx.restore();
+  ctx.beginPath(); ctx.arc(CX,CY,10,0,Math.PI*2); ctx.fillStyle='#3a3228'; ctx.fill();
+  ctx.beginPath(); ctx.arc(CX,CY,90,0,Math.PI*2); ctx.fillStyle='#f9f5efee'; ctx.fill();
+}
+
+// ─── CURRENT BLOCK (overnight-aware) ──────────────────
+function inBlock(seg, h){
+  if(isOvernight(seg)) return h>=seg.start || h<seg.end;
+  return h>=seg.start && h<seg.end;
+}
+function getCurrentBlock(){
+  const h=new Date().getHours()+new Date().getMinutes()/60;
+  return schedule.find(s=>inBlock(s,h))||schedule[0];
+}
+
+// ─── UI UPDATE ────────────────────────────────────────
+function updateUI(){
+  const now=new Date();
+  const hh=String(now.getHours()).padStart(2,'0'), mm=String(now.getMinutes()).padStart(2,'0');
+  document.getElementById('clockTimeDisplay').textContent=`${hh}:${mm}`;
+  const block=getCurrentBlock();
+  if(block){
+    const banner=document.getElementById('currentTaskBanner');
+    banner.style.borderLeftColor=block.color;
+    const onTag=isOvernight(block)?'<span class="overnight-badge">야간</span>':'';
+    banner.innerHTML=`
+      <div class="banner-time">${hToStr(block.start)} – ${hToStr(block.end)}${isOvernight(block)?' (익일)':''} · 현재 진행 중</div>
+      <div class="banner-task">${escapeHTML(block.icon)} ${escapeHTML(block.task)}${onTag}</div>
+      <div class="banner-strategy">${escapeHTML(block.strategy)}</div>`;
+  }
+  document.querySelectorAll('#scheduleBody tr[data-idx]').forEach(tr=>{
+    const s=schedule[parseInt(tr.dataset.idx)];
+    tr.classList.toggle('active-row', s===block && !isDone(s));
+  });
+  const checks=getDateChecks(viewDate);
+  const doneCount=schedule.filter(s=>!!checks[blockKey(s)]).length;
+  const total=schedule.length;
+  const pct=total?Math.round(doneCount/total*100):0;
+  const isToday=dateKey(viewDate)===todayStr();
+  document.getElementById('progressSection').innerHTML=`
+    <div class="progress-label">
+      <span style="font-family:'Noto Serif KR',serif;font-weight:600">${isToday?'오늘':'해당일'} 완료율</span>
+      <span>${doneCount} / ${total} 블록 완료 · ${pct}%</span>
+    </div>
+    <div class="progress-bar-bg"><div class="progress-bar-fill" style="width:${pct}%;background:linear-gradient(90deg,#6ab06a,#8aca6a)"></div></div>
+    <div class="progress-segments">
+      ${[...schedule].sort((a,b)=>a.start-b.start).map(s=>{
+        const done=!!checks[blockKey(s)];
+        return `<div class="seg-item"><span class="color-dot" style="background:${done?'#6ab06a':safeColor(s.color)};${done?'outline:2px solid #5a9a5a;outline-offset:1px':''}"></span>${escapeHTML(s.label)}${done?' ✓':''}</div>`;
+      }).join('')}
+    </div>`;
+  drawClock();
+}
+
+// ─── DATE NAV ─────────────────────────────────────────
+function updateDateNav(){
+  const dk=dateKey(viewDate);
+  const td=todayStr();
+  const isToday=dk===td;
+  const d=viewDate;
+  document.getElementById('dateNavMain').textContent=
+    `${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일 (${DAYS[d.getDay()]})`;
+  document.getElementById('dateNavSub').textContent= isToday?'오늘':'';
+  const ch=getDateChecks(viewDate);
+  const done=schedule.filter(s=>!!ch[blockKey(s)]).length;
+  document.getElementById('dateNavProgress').textContent=
+    done>0?`✓ ${done}/${schedule.length} 완료`:'';
+}
+function shiftDate(delta){
+  viewDate=new Date(viewDate); viewDate.setDate(viewDate.getDate()+delta);
+  renderTable(); updateDateNav(); updateUI();
+}
+function goToday(){
+  viewDate=new Date(); viewDate.setHours(0,0,0,0);
+  renderTable(); updateDateNav(); updateUI();
+}
+
+// ─── CATEGORY SELECTOR ────────────────────────────────
+let editingCategory='input';
+function buildCatSelector(selected){
+  editingCategory=selected||'input';
+  const box=document.getElementById('catSelector');
+  box.innerHTML=CATEGORIES.map(c=>`
+    <button class="cat-opt${editingCategory===c.id?' selected':''}" onclick="selectCat('${c.id}')">
+      ${c.icon} ${c.label}
+    </button>`).join('');
+}
+function selectCat(id){
+  editingCategory=id;
+  document.querySelectorAll('.cat-opt').forEach(b=>b.classList.toggle('selected',b.textContent.trim().startsWith(CATEGORIES.find(c=>c.id===id).icon)));
+}
+
+// ─── TABLE ────────────────────────────────────────────
+function catInfo(id){ return CATEGORIES.find(c=>c.id===id)||CATEGORIES[2]; }
+function renderTable(){
+  sortSchedule();
+  const isToday=dateKey(viewDate)===todayStr();
+  document.getElementById('scheduleBody').innerHTML=schedule.map((s,i)=>{
+    const on=isOvernight(s);
+    const dur=segDuration(s);
+    const durStr=`${Math.floor(dur)}h${Math.round((dur%1)*60)?Math.round((dur%1)*60)+'m':''}`;
+    const cat=catInfo(s.category);
+    const done=isDone(s);
+    return `<tr data-idx="${i}"${done?' class="done-row"':''}>
+      <td class="td-cat">
+        <span class="cat-badge ${cat.cls}">
+          <span class="cat-icon">${cat.icon}</span>
+          <span>${cat.label}</span>
+        </span>
+      </td>
+      <td class="td-time">
+        <span class="color-dot" style="background:${safeColor(s.color)}"></span>
+        ${hToStr(s.start)} – ${hToStr(s.end)}${on?'<span class="overnight-badge">익일</span>':''}
+        <span style="font-size:0.68rem;color:var(--ink-light);margin-left:4px">(${durStr})</span>
+      </td>
+      <td class="td-task">${escapeHTML(s.task)}</td>
+      <td class="td-strategy">${escapeHTML(s.strategy)}</td>
+      <td class="td-check">
+        <button class="check-btn${done?' checked':''}" onclick="event.stopPropagation();toggleCheck(schedule[${i}])" title="${done?'완료 취소':'완료 표시'}">${done?'✓':''}</button>
+      </td>
+      <td class="td-actions">
+        <button class="icon-btn" onclick="event.stopPropagation();openEditModal(${i})" title="수정">✏️</button>
+        <button class="icon-btn del" onclick="event.stopPropagation();confirmDelete(${i})" title="삭제">🗑</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// ─── MODAL ────────────────────────────────────────────
+function openEditModal(idx){
+  isAdding=false; editingIdx=idx;
+  const s=schedule[idx];
+  document.getElementById('modalTitle').textContent='시간대 수정';
+  document.getElementById('editIcon').value=s.icon;
+  document.getElementById('editLabel').value=s.label;
+  document.getElementById('editTask').value=s.task;
+  document.getElementById('editStrategy').value=s.strategy;
+  buildCatSelector(s.category||'input');
+  document.getElementById('deleteBtn').style.display='inline-block';
+  document.getElementById('timeError').classList.remove('show');
+  document.getElementById('collisionWarn').classList.remove('show');
+  document.getElementById('overnightPreview').classList.remove('show');
+  document.getElementById('modalOverlay').classList.add('open');
+  setTimeout(()=>{
+    pStart=buildTimePicker('startPickerBox',s.start,liveCheck);
+    pEnd  =buildTimePicker('endPickerBox',  s.end,  liveCheck);
+    liveCheck();
+  },0);
+}
+
+function openAddModal(){
+  const gaps=findFreeGaps();
+  let start, end;
+  if(gaps.length){ start=gaps[0].start; end=Math.min(gaps[0].end,start+1); }
+  else { start=Math.min(new Date().getHours(),23); end=start+1; }   // no gap: carve from current hour
+  if(end<=start) end=start+1;
+  if(end>24) end=24;
+  isAdding=true; editingIdx=-1;
+  document.getElementById('modalTitle').textContent='새 시간대 추가';
+  document.getElementById('editIcon').value='⭐';
+  document.getElementById('editLabel').value='';
+  document.getElementById('editTask').value='';
+  document.getElementById('editStrategy').value='';
+  buildCatSelector('input');
+  document.getElementById('deleteBtn').style.display='none';
+  document.getElementById('timeError').classList.remove('show');
+  document.getElementById('collisionWarn').classList.remove('show');
+  document.getElementById('overnightPreview').classList.remove('show');
+  document.getElementById('modalOverlay').classList.add('open');
+  setTimeout(()=>{
+    pStart=buildTimePicker('startPickerBox',start,liveCheck);
+    pEnd  =buildTimePicker('endPickerBox',  end,  liveCheck);
+    liveCheck();
+  },0);
+}
+
+function closeModal(){
+  document.getElementById('modalOverlay').classList.remove('open');
+  editingIdx=-1; isAdding=false; pStart=null; pEnd=null;
+}
+
+function saveModal(){
+  if(!pStart||!pEnd) return;                       // race guard (picker not built yet)
+  const s=pStart.getValue(), e=pEnd.getValue();
+  const errEl=document.getElementById('timeError');
+  errEl.classList.remove('show');
+  const selfErr=blockSelfError(s,e);
+  if(selfErr){errEl.textContent=selfErr;errEl.classList.add('show');return;}
+  const icon  =document.getElementById('editIcon').value.trim()||'📌';
+  const color =colorForCat(editingCategory);
+  const label =document.getElementById('editLabel').value.trim()||`${hToStr(s)}블록`;
+  const task  =document.getElementById('editTask').value.trim()||label;
+  const strat =document.getElementById('editStrategy').value.trim()||'';
+  const base=!isAdding&&schedule[editingIdx]?schedule[editingIdx]:{};
+  const newBlock=touchScheduleBlock({...base,start:s,end:e,icon,color,label,task,strategy:strat,category:editingCategory});
+  // Edited/added block wins; trim or drop overlapping neighbours.
+  const others=resolveOverlaps(schedule,newBlock,isAdding?-1:editingIdx);
+  schedule=[...others,newBlock];
+  sortSchedule(); saveSchedule(); renderTable(); updateUI(); closeModal();
+}
+
+function confirmDelete(idx){
+  if(schedule.length<=1){alert('최소 1개의 시간대가 필요합니다.');return;}
+  if(confirm(`"${schedule[idx].task}" 블록을 삭제할까요?`)){
+    const removed=schedule[idx];
+    addTombstone('schedule',currentMode,removed);
+    schedule.splice(idx,1); saveSchedule(); renderTable(); updateUI();
+  }
+}
+function deleteBlock(){
+  if(editingIdx<0) return;
+  const idx=editingIdx;        // capture before closeModal() resets editingIdx to -1
+  closeModal();
+  confirmDelete(idx);
+}
+function resetSchedule(){
+  if(confirm(`${MODE_CONFIG[currentMode].label} 시간표를 기본 일정으로 초기화할까요?`)){
+    const ts=nowIso();
+    schedule.forEach(b=>addTombstone('schedule',currentMode,b,ts));
+    schedule=defaultSchedule(currentMode).map(b=>touchScheduleBlock(b,ts));
+    saveSchedule(); renderTable(); updateUI();
+  }
+}
+// 바깥 클릭으로는 닫히지 않음 — 우측상단 ✕ 또는 '취소' 버튼으로만 닫힘 (입력 보호)
+
+// ─── BACKUP / RESTORE ─────────────────────────────────
+function makeBackupPayload(){
+  return {
+    app:'study_plan_app',
+    version:2,
+    mode:currentMode,
+    modeLabel:MODE_CONFIG[currentMode].label,
+    exportedAt:new Date().toISOString(),
+    schedule,
+    goals,
+    checks:loadAllChecks(),
+    tombstones:loadTombstones()
+  };
+}
+function exportData(){
+  const blob=new Blob([JSON.stringify(makeBackupPayload(),null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download=`study-plan-${currentMode}-backup-${new Date().toISOString().slice(0,10)}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+  setStorageStatus('백업 파일 저장됨');
+}
+function normalizeImportedBlock(raw,i){
+  return normalizeScheduleBlock(raw||{},i,currentMode);
+}
+function importDataFromFile(input){
+  const file=input.files&&input.files[0];
+  if(!file) return;
+  const reader=new FileReader();
+  reader.onload=()=>{
+    try{
+      const data=JSON.parse(reader.result);
+      const importedSchedule=Array.isArray(data.schedule) ? data.schedule.map(normalizeImportedBlock) : null;
+      const importedGoals=Array.isArray(data.goals) ? normalizeGoalsList(data.goals,currentMode) : [];
+      if(!importedSchedule||!importedSchedule.length) throw new Error('일정 데이터가 없습니다.');
+      const errs=validateBlocks(importedSchedule);
+      if(errs.length) throw new Error(errs[0]);
+      if(!confirm(`백업 파일의 일정과 목표로 현재 ${MODE_CONFIG[currentMode].label} 데이터를 바꿀까요?`)) return;
+      const ts=nowIso();
+      schedule.forEach(b=>addTombstone('schedule',currentMode,b,ts));
+      goals.forEach(g=>addTombstone('goal',currentMode,g,ts));
+      schedule=importedSchedule.map(b=>touchScheduleBlock(b,ts));
+      goals=importedGoals.map(g=>({...g,updated_at:ts,deleted_at:null}));
+      if(data.checks) saveAllChecks(data.checks);
+      if(Array.isArray(data.tombstones)) saveTombstones(data.tombstones);
+      sortSchedule(); saveSchedule(); saveGoals(); renderTable(); renderGoals(); updateUI();
+      setStorageStatus('백업을 불러와 브라우저에 저장됨');
+    }catch(e){
+      alert(`백업 파일을 불러오지 못했습니다: ${e.message}`);
+    }finally{
+      input.value='';
+    }
+  };
+  reader.onerror=()=>{alert('백업 파일을 읽지 못했습니다.'); input.value='';};
+  reader.readAsText(file,'utf-8');
+}
+
+// ─── A4 PRINT ─────────────────────────────────────────
+function drawRoundRect(c,x,y,w,h,r){
+  c.beginPath();
+  c.moveTo(x+r,y);
+  c.lineTo(x+w-r,y);
+  c.quadraticCurveTo(x+w,y,x+w,y+r);
+  c.lineTo(x+w,y+h-r);
+  c.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+  c.lineTo(x+r,y+h);
+  c.quadraticCurveTo(x,y+h,x,y+h-r);
+  c.lineTo(x,y+r);
+  c.quadraticCurveTo(x,y,x+r,y);
+  c.closePath();
+}
+function wrapCanvasText(c,text,x,y,maxWidth,lineHeight,maxLines){
+  const chars=String(text||'').split('');
+  const lines=[]; let line='';
+  chars.forEach(ch=>{
+    const next=line+ch;
+    if(c.measureText(next).width>maxWidth&&line){
+      lines.push(line); line=ch;
+    }else line=next;
+  });
+  if(line) lines.push(line);
+  const clipped=maxLines?lines.slice(0,maxLines):lines;
+  clipped.forEach((ln,i)=>c.fillText(ln,x,y+i*lineHeight));
+  if(maxLines&&lines.length>maxLines){
+    const last=clipped[maxLines-1];
+    c.fillText('...',x+c.measureText(last).width+4,y+(maxLines-1)*lineHeight);
+  }
+}
+function buildPrintImage(){
+  drawClock();
+  const sorted=[...schedule].sort((a,b)=>a.start-b.start);
+  const modeLabel=MODE_CONFIG[currentMode].label;
+
+  const page=document.createElement('canvas');
+  page.width=1240; page.height=1754;
+  const p=page.getContext('2d');
+  p.fillStyle='#fffaf2'; p.fillRect(0,0,page.width,page.height);
+
+  p.strokeStyle='#e1cfbc'; p.lineWidth=2;
+  drawRoundRect(p,28,28,1184,1698,28); p.stroke();
+  p.strokeStyle='#ecdcca'; p.lineWidth=1;
+  drawRoundRect(p,40,40,1160,1674,24); p.stroke();
+
+  p.textAlign='center'; p.textBaseline='middle';
+  p.fillStyle='#232323';
+  p.font='700 50px "Noto Serif KR", "Malgun Gothic", serif';
+  p.fillText('Dr. Bugeon의 학습계획표',620,100);
+  p.font='500 24px "Noto Sans KR", "Malgun Gothic", sans-serif';
+  p.fillStyle='#6b5f53';
+  p.fillText(`${modeLabel} · Study plan`,620,145);
+  p.strokeStyle='#8ca696'; p.lineWidth=2;
+  p.beginPath(); p.moveTo(520,170); p.lineTo(720,170); p.stroke();
+  p.fillStyle='#8ca696'; p.beginPath(); p.arc(620,170,5,0,Math.PI*2); p.fill();
+
+  p.drawImage(canvas,250,195,740,740);
+
+  const tableX=70, tableY=980, tableW=1100, headerH=54;
+  const rowH=Math.min(72,Math.floor((570-headerH)/Math.max(sorted.length,1)));
+  const tableH=headerH+rowH*sorted.length;
+  p.fillStyle='#fffdf7';
+  p.strokeStyle='#4b917d'; p.lineWidth=2;
+  drawRoundRect(p,tableX,tableY,tableW,tableH,18); p.fill(); p.stroke();
+  p.save();
+  drawRoundRect(p,tableX,tableY,tableW,tableH,18); p.clip();
+  p.fillStyle='#5d967f'; p.fillRect(tableX,tableY,tableW,headerH);
+  const cols=[82,230,280,508];
+  let cx=tableX;
+  p.strokeStyle='rgba(255,255,255,0.4)'; p.lineWidth=1;
+  cols.slice(0,-1).forEach(w=>{ cx+=w; p.beginPath(); p.moveTo(cx,tableY); p.lineTo(cx,tableY+tableH); p.stroke(); });
+  p.fillStyle='white'; p.font='700 20px "Noto Sans KR", "Malgun Gothic", sans-serif';
+  p.textAlign='center';
+  p.fillText('시간대 (Time)',tableX+cols[0]+cols[1]/2,tableY+headerH/2);
+  p.fillText('활동 내용 (Task)',tableX+cols[0]+cols[1]+cols[2]/2,tableY+headerH/2);
+  p.fillText('핵심 전략 (Strategy)',tableX+cols[0]+cols[1]+cols[2]+cols[3]/2,tableY+headerH/2);
+
+  sorted.forEach((s,i)=>{
+    const y=tableY+headerH+i*rowH;
+    const overnight=isOvernight(s);
+    if(i%2===0){p.fillStyle='rgba(248,244,235,0.85)'; p.fillRect(tableX,y,tableW,rowH);}
+    p.strokeStyle='#bfd0c8'; p.lineWidth=1; p.beginPath(); p.moveTo(tableX,y); p.lineTo(tableX+tableW,y); p.stroke();
+    p.textBaseline='middle';
+    p.textAlign='center'; p.font='28px "Segoe UI Emoji", "Apple Color Emoji", sans-serif'; p.fillStyle='#222';
+    p.fillText(s.icon,tableX+cols[0]/2,y+rowH/2);
+    p.font='700 20px "Noto Sans KR", "Malgun Gothic", sans-serif';
+    p.fillText(`${hToStr(s.start)}-${hToStr(s.end)}${overnight?' 익일':''}`,tableX+cols[0]+cols[1]/2,y+rowH/2);
+    p.textAlign='left'; p.fillStyle='#2b2b2b';
+    p.font='700 20px "Noto Sans KR", "Malgun Gothic", sans-serif';
+    wrapCanvasText(p,s.task,tableX+cols[0]+cols[1]+24,y+28,cols[2]-38,24,2);
+    p.font='500 18px "Noto Sans KR", "Malgun Gothic", sans-serif';
+    p.fillStyle='#353535';
+    wrapCanvasText(p,s.strategy,tableX+cols[0]+cols[1]+cols[2]+24,y+25,cols[3]-44,22,2);
+  });
+  p.restore();
+
+  p.strokeStyle='#d8ded3'; p.lineWidth=2;
+  p.beginPath(); p.moveTo(210,1630); p.lineTo(530,1630); p.stroke();
+  p.beginPath(); p.moveTo(710,1630); p.lineTo(1030,1630); p.stroke();
+  p.fillStyle='#b7c7b7'; p.font='700 28px serif'; p.textAlign='center';
+  p.fillText('›››  ◦  ‹‹‹',620,1630);
+  return page.toDataURL('image/png');
+}
+function buildPrintSheet(){
+  document.getElementById('printSheet').innerHTML=`<img class="print-page-img" src="${buildPrintImage()}" alt="Dr. Bugeon의 학습계획표">`;
+}
+async function printA4(){
+  if(document.fonts&&document.fonts.ready) await document.fonts.ready;
+  const imageUrl=buildPrintImage();
+  const printWindow=window.open('','_blank','width=900,height=1200');
+  if(!printWindow){alert('인쇄 창이 차단되었습니다. 팝업 차단을 해제한 뒤 다시 시도해주세요.');return;}
+  printWindow.document.open();
+  printWindow.document.write(`<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title></title>
+    <style>
+      @page{size:A4 portrait;margin:0;}
+      html,body{margin:0!important;padding:0!important;width:210mm;height:297mm;background:white;overflow:hidden;}
+      img{display:block;width:210mm;height:297mm;margin:0;padding:0;}
+      @media print{html,body{margin:0!important;padding:0!important;} img{page-break-after:avoid;}}
+    </style></head><body><img src="${imageUrl}" alt="Dr. Bugeon의 학습계획표"></body></html>`);
+  printWindow.document.close();
+  printWindow.onload=()=>{printWindow.focus(); printWindow.print(); setTimeout(()=>printWindow.close(),500);};
+}
+window.addEventListener('beforeprint',buildPrintSheet);
+
+// ─── GOALS ────────────────────────────────────────────
+function updateGoalsDate(){
+  const d=new Date();
+  document.getElementById('goalsDate').textContent=`${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일 (${DAYS[d.getDay()]})`;
+}
+function renderGoals(){
+  const w=document.getElementById('goalsTags');
+  if(!goals.length){w.innerHTML='<span class="goals-empty">아직 목표가 없습니다. 위에 입력해보세요!</span>';return;}
+  w.innerHTML=goals.map((g,i)=>`<span class="goal-tag"><span>✓ ${escapeHTML(goalText(g))}</span><button class="goal-tag-del" onclick="removeGoal(${i})">✕</button></span>`).join('');
+}
+function addGoal(){
+  const inp=document.getElementById('goalsInput');
+  const lines=inp.value.split('\n').map(s=>s.trim()).filter(Boolean);
+  if(!lines.length)return;
+  const ts=nowIso();
+  goals.push(...lines.map(text=>({id:newId('goal'),text,created_at:ts,updated_at:ts,deleted_at:null})));
+  saveGoals(); renderGoals(); inp.value='';
+}
+function removeGoal(i){
+  if(!goals[i]) return;
+  addTombstone('goal',currentMode,goals[i]);
+  goals.splice(i,1);saveGoals();renderGoals();
+}
+document.getElementById('goalsInput').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();addGoal();}});
+
+// ─── ☁ SUPABASE CLOUD SYNC ───────────────────────────
+const SB_CFG_KEY='study_plan_sb_cfg_v1';
+const SB_TABLE='study_plan_records';
+const SB_META_TABLE='language_sync_meta';
+let sbClient=null, sbCfg=null, cloudSyncTimer=null, suppressAutoSync=false, syncInFlight=false;
+
+const SQL_TEXT=`-- Supabase SQL Editor에서 1회 실행
+create table if not exists study_plan_records (
+  id text primary key,
+  sync_id text not null,
+  type text not null,
+  mode text not null,
+  payload jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  deleted_at timestamptz
+);
+create index if not exists study_plan_records_sync_mode_updated_idx
+  on study_plan_records (sync_id, mode, updated_at desc);
+
+create table if not exists language_sync_meta (
+  key text primary key,
+  value text,
+  updated_at timestamptz default now()
+);
+
+alter table study_plan_records enable row level security;
+alter table language_sync_meta enable row level security;
+
+create policy "study plan records anon all" on study_plan_records
+  for all using (true) with check (true);
+create policy "language sync meta anon all" on language_sync_meta
+  for all using (true) with check (true);`;
+
+function loadSbCfg(){
+  try{ return JSON.parse(localStorage.getItem(SB_CFG_KEY))||null; }catch{ return null; }
+}
+function saveSbCfg(cfg){ localStorage.setItem(SB_CFG_KEY,JSON.stringify(cfg)); }
+
+function setCloudStatus(msg,type){
+  const el=document.getElementById('cloudStatus');
+  if(!el) return;
+  el.textContent=msg;
+  el.className='cloud-status'+(type?(' '+type):'');
+}
+
+function initSbFromCfg(){
+  sbCfg=loadSbCfg();
+  if(sbCfg&&sbCfg.url&&sbCfg.key&&window.supabase){
+    try{
+      sbClient=window.supabase.createClient(sbCfg.url,sbCfg.key);
+      setTimeout(()=>cloudAutoSync(true),800);
+    }catch(e){ sbClient=null; }
+  }
+}
+
+function openCloudModal(){
+  const cfg=loadSbCfg()||{};
+  document.getElementById('sbUrl').value=cfg.url||'';
+  document.getElementById('sbKey').value=cfg.key||'';
+  document.getElementById('sbDevice').value=cfg.device||'';
+  document.getElementById('sqlSnippet').textContent=SQL_TEXT;
+  if(sbClient&&cfg.device) setCloudStatus(`연결됨 · ID: ${cfg.device}`,'ok');
+  else setCloudStatus('연결 안 됨');
+  document.getElementById('cloudOverlay').classList.add('open');
+}
+function closeCloudModal(){ document.getElementById('cloudOverlay').classList.remove('open'); }
+
+async function cloudConnect(){
+  const url=document.getElementById('sbUrl').value.trim();
+  const key=document.getElementById('sbKey').value.trim();
+  const device=document.getElementById('sbDevice').value.trim();
+  if(!url||!key||!device){ setCloudStatus('URL · key · 동기화 ID를 모두 입력하세요','err'); return; }
+  if(!window.supabase){ setCloudStatus('Supabase 라이브러리 로드 실패 (인터넷 확인)','err'); return; }
+  try{
+    sbClient=window.supabase.createClient(url,key);
+    sbCfg={url,key,device};
+    saveSbCfg(sbCfg);
+    setCloudStatus(`연결됨 · ID: ${device} · 즉시 동기화 중...`,'ok');
+    setStorageStatus('클라우드 연결 저장됨');
+    await cloudAutoSync(true);
+  }catch(e){ setCloudStatus('연결 실패: '+e.message,'err'); }
+}
+
+function cloudDisconnect(){
+  sbClient=null; sbCfg=null;
+  localStorage.removeItem(SB_CFG_KEY);
+  setCloudStatus('연결 해제됨');
+  setStorageStatus('클라우드 연결 해제됨');
+}
+
+function restHeaders(extra={}){
+  return {
+    apikey:sbCfg.key,
+    Authorization:`Bearer ${sbCfg.key}`,
+    'Content-Type':'application/json',
+    ...extra
+  };
+}
+async function restUpsert(table,rows,onConflict){
+  if(!rows.length) return;
+  const url=`${sbCfg.url.replace(/\/$/,'')}/rest/v1/${table}?on_conflict=${encodeURIComponent(onConflict)}`;
+  for(let i=0;i<rows.length;i+=200){
+    const batch=rows.slice(i,i+200);
+    const res=await fetch(url,{
+      method:'POST',
+      headers:restHeaders({Prefer:'resolution=merge-duplicates,return=minimal'}),
+      body:JSON.stringify(batch)
+    });
+    if(!res.ok){
+      const text=await res.text().catch(()=>'');
+      throw new Error(`batch upsert 실패(${res.status}): ${text||res.statusText}`);
+    }
+  }
+}
+function syncRowFromRecord(type,mode,record){
+  const ts=record.updated_at||record.created_at||nowIso();
+  const payload={};
+  if(type==='schedule'){
+    Object.assign(payload,{start:record.start,end:record.end,icon:record.icon,task:record.task,strategy:record.strategy,color:record.color,label:record.label,category:record.category});
+  }else if(type==='goal'){
+    Object.assign(payload,{text:goalText(record)});
+  }else if(type==='check'){
+    Object.assign(payload,{date:record.date,block_id:record.block_id,checked:!!record.checked});
+  }
+  return {
+    id:record.id,
+    sync_id:sbCfg.device,
+    type,
+    mode,
+    payload,
+    created_at:record.created_at||ts,
+    updated_at:ts,
+    deleted_at:record.deleted_at||null
+  };
+}
+function getLocalSyncRows(){
+  const rows=[];
+  normalizeScheduleList(schedule,currentMode).forEach(b=>rows.push(syncRowFromRecord('schedule',currentMode,b)));
+  normalizeGoalsList(goals,currentMode).forEach(g=>rows.push(syncRowFromRecord('goal',currentMode,g)));
+  const checks=loadAllChecks();
+  Object.keys(checks).forEach(dk=>{
+    Object.keys(checks[dk]||{}).forEach(bk=>{
+      const rec=normalizeCheckRecord(checks[dk][bk],dk,bk);
+      if(rec.mode===currentMode) rows.push(syncRowFromRecord('check',currentMode,rec));
+    });
+  });
+  loadTombstones().filter(r=>r.mode===currentMode).forEach(r=>rows.push({...r,sync_id:sbCfg.device}));
+  return rows;
+}
+async function fetchCloudRows(){
+  const {data,error}=await sbClient.from(SB_TABLE)
+    .select('id,sync_id,type,mode,payload,created_at,updated_at,deleted_at')
+    .eq('sync_id',sbCfg.device)
+    .eq('mode',currentMode)
+    .order('updated_at',{ascending:false});
+  if(error) throw error;
+  return data||[];
+}
+function canonicalMetaKey(){ return `study_plan:${sbCfg.device}:canonical_version`; }
+async function fetchCanonicalVersion(){
+  const {data,error}=await sbClient.from(SB_META_TABLE).select('value').eq('key',canonicalMetaKey()).maybeSingle();
+  if(error) throw error;
+  return data&&data.value?data.value:'';
+}
+async function setCanonicalVersion(value){
+  await restUpsert(SB_META_TABLE,[{key:canonicalMetaKey(),value,updated_at:nowIso()}],'key');
+  setLastCanonical(sbCfg.device,value);
+}
+function newerRow(a,b){
+  if(!a) return b;
+  if(!b) return a;
+  return new Date(a.updated_at||0)>=new Date(b.updated_at||0)?a:b;
+}
+function mergeRows(localRows,cloudRows){
+  const map=new Map();
+  [...cloudRows,...localRows].forEach(row=>map.set(row.id,newerRow(map.get(row.id),row)));
+  return Array.from(map.values()).sort((a,b)=>new Date(b.updated_at||0)-new Date(a.updated_at||0));
+}
+function rowToSchedule(row){
+  return normalizeScheduleBlock({id:row.id,created_at:row.created_at,updated_at:row.updated_at,deleted_at:row.deleted_at,...(row.payload||{})},0,row.mode);
+}
+function rowToGoal(row){
+  return normalizeGoalRecord({id:row.id,created_at:row.created_at,updated_at:row.updated_at,deleted_at:row.deleted_at,text:(row.payload||{}).text},0,row.mode);
+}
+function rowToCheck(row){
+  const p=row.payload||{};
+  return normalizeCheckRecord({id:row.id,mode:row.mode,date:p.date,block_id:p.block_id,checked:!!p.checked,created_at:row.created_at,updated_at:row.updated_at,deleted_at:row.deleted_at},p.date,p.block_id);
+}
+function applyRowsToLocal(rows){
+  const active=rows.filter(r=>r.mode===currentMode&&!r.deleted_at);
+  const deleted=rows.filter(r=>r.mode===currentMode&&r.deleted_at);
+  const nextSchedule=active.filter(r=>r.type==='schedule').map(rowToSchedule);
+  const nextGoals=active.filter(r=>r.type==='goal').map(rowToGoal);
+  const nextChecks={};
+  rows.filter(r=>r.mode===currentMode&&r.type==='check').forEach(r=>{
+    const rec=rowToCheck(r); if(!rec.date||!rec.block_id) return;
+    if(!nextChecks[rec.date]) nextChecks[rec.date]={};
+    nextChecks[rec.date][rec.block_id]=rec;
+  });
+  const otherTombstones=loadTombstones().filter(r=>r.mode!==currentMode);
+  suppressAutoSync=true;
+  schedule=nextSchedule.sort((a,b)=>a.start-b.start);
+  goals=nextGoals;
+  saveTombstones([...otherTombstones,...deleted]);
+  localStorage.setItem(scheduleKey(),JSON.stringify(schedule));
+  localStorage.setItem(goalsKey(),JSON.stringify(goals));
+  localStorage.setItem(CHECKS_KEY,JSON.stringify(nextChecks));
+  suppressAutoSync=false;
+  renderTable(); renderGoals(); updateUI(); updateDateNav();
+}
+async function cloudAutoSync(silent=false){
+  if(!sbClient||!sbCfg){ if(!silent) setCloudStatus('먼저 연결하세요','err'); return; }
+  if(syncInFlight) return;
+  syncInFlight=true;
+  try{
+    if(!silent) setCloudStatus('병합 동기화 중...');
+    const remoteCanonical=await fetchCanonicalVersion();
+    const localCanonical=getLastCanonical(sbCfg.device);
+    const cloudRows=await fetchCloudRows();
+    if(remoteCanonical&&remoteCanonical!==localCanonical){
+      applyRowsToLocal(cloudRows);
+      setLastCanonical(sbCfg.device,remoteCanonical);
+      setCloudStatus('✓ 클라우드 최종본을 이 기기에 반영함','ok');
+      setStorageStatus('최종본 기준 동기화 완료');
+      return;
+    }
+    const merged=mergeRows(getLocalSyncRows(),cloudRows);
+    applyRowsToLocal(merged);
+    await restUpsert(SB_TABLE,merged,'id');
+    setCloudStatus(`✓ 병합 동기화 완료 · ${merged.length}개 레코드`,'ok');
+    setStorageStatus('클라우드 병합 동기화 완료');
+  }catch(e){ setCloudStatus('동기화 실패: '+e.message,'err'); }
+  finally{ syncInFlight=false; }
+}
+function queueAutoSync(){
+  if(suppressAutoSync||!sbClient||!sbCfg) return;
+  clearTimeout(cloudSyncTimer);
+  cloudSyncTimer=setTimeout(()=>cloudAutoSync(true),1200);
+}
+async function cloudPush(){
+  if(!sbClient||!sbCfg){ setCloudStatus('먼저 연결하세요','err'); return; }
+  setCloudStatus('이 기기를 최종본으로 지정하는 중...');
+  try{
+    const ts=nowIso();
+    const cloudRows=await fetchCloudRows();
+    const localRows=getLocalSyncRows();
+    const localIds=new Set(localRows.map(r=>r.id));
+    const cloudOnlyDeletes=cloudRows
+      .filter(r=>!localIds.has(r.id)&&!r.deleted_at)
+      .map(r=>({...r,updated_at:ts,deleted_at:ts}));
+    const finalRows=mergeRows(localRows,cloudOnlyDeletes);
+    await restUpsert(SB_TABLE,finalRows,'id');
+    const version=`${ts}_${deviceInstanceId()}`;
+    await setCanonicalVersion(version);
+    applyRowsToLocal(finalRows);
+    setCloudStatus(`✓ 이 기기를 최종본으로 올림 · canonical_version 갱신`,'ok');
+    setStorageStatus('이 기기 기준 최종본 업로드 완료');
+  }catch(e){ setCloudStatus('최종본 올리기 실패: '+e.message,'err'); }
+}
+async function cloudPull(){
+  if(!sbClient||!sbCfg){ setCloudStatus('먼저 연결하세요','err'); return; }
+  setCloudStatus('클라우드 최종본을 받는 중...');
+  try{
+    const cloudRows=await fetchCloudRows();
+    const remoteCanonical=await fetchCanonicalVersion();
+    applyRowsToLocal(cloudRows);
+    if(remoteCanonical) setLastCanonical(sbCfg.device,remoteCanonical);
+    setCloudStatus(`✓ 클라우드 기준 반영 완료 · 로컬 전용 항목 보존 안 함`,'ok');
+    setStorageStatus('클라우드 최종본 기준으로 받음');
+  }catch(e){ setCloudStatus('받기 실패: '+e.message,'err'); }
+}
+
+function copySQL(){
+  navigator.clipboard.writeText(SQL_TEXT).then(()=>setCloudStatus('SQL 복사됨','ok'),
+    ()=>setCloudStatus('복사 실패 — 수동 선택하세요','err'));
+}
+
+// ─── INIT ─────────────────────────────────────────────
+pruneOldChecks();
+initSbFromCfg();
+updateModeUI(); updateGoalsDate(); renderGoals(); sortSchedule(); renderTable(); updateUI(); updateDateNav();
+setStorageStatus('브라우저 자동 저장 준비 완료');
+setInterval(updateUI,30000);
+</script>
+</body>
+</html>
