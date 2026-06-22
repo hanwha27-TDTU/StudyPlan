@@ -99,12 +99,16 @@
   .modal-x:hover{background:var(--danger);color:#fff;}
   .cloud-desc{font-size:0.78rem;color:var(--ink-light);line-height:1.6;margin-bottom:14px;}
   .cloud-hint{display:block;font-size:0.68rem;color:#a89a88;margin-top:4px;}
-  .cloud-status{font-size:0.76rem;padding:8px 12px;border-radius:8px;background:#f0ebe3;color:var(--ink-light);margin:8px 0 14px;}
+  .cloud-status{font-size:0.76rem;padding:8px 12px;border-radius:8px;background:#f0ebe3;color:var(--ink-light);margin:8px 0 14px;white-space:pre-line;line-height:1.6;}
   .cloud-status.ok{background:#e2eedc;color:#4a7a42;}
   .cloud-status.err{background:#fbe3e3;color:var(--danger);}
   .cloud-btns{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;}
   .cloud-sql summary{cursor:pointer;font-size:0.78rem;color:var(--gold);font-weight:700;}
   .cloud-sql pre{background:#2a2620;color:#e8e0d4;font-size:0.68rem;padding:12px;border-radius:8px;overflow-x:auto;margin:10px 0;line-height:1.5;white-space:pre-wrap;word-break:break-all;}
+  .dev-info-list{font-size:0.76rem;line-height:1.7;color:var(--ink-light);display:grid;gap:6px;margin-bottom:12px;}
+  .dev-info-list strong{color:var(--ink);}
+  .update-history{font-size:0.75rem;line-height:1.65;color:var(--ink-light);margin-top:8px;}
+  .update-history summary{cursor:pointer;color:var(--gold);font-weight:700;margin-top:6px;}
   @keyframes modalIn{from{opacity:0;transform:scale(0.95) translateY(10px)}to{opacity:1;transform:scale(1) translateY(0)}}
   .modal h3{font-family:'Playfair Display',serif;font-size:1.15rem;margin-bottom:18px;}
 
@@ -269,6 +273,7 @@
       <button class="btn btn-reset" onclick="document.getElementById('importFile').click()">⬆ 백업 불러오기</button>
       <button class="btn btn-reset" onclick="printA4()">🖨 A4 출력</button>
       <button class="btn btn-reset" onclick="openCloudModal()">☁ 클라우드</button>
+      <button class="btn btn-reset" onclick="openDevInfo()">ⓘ 개발자 정보</button>
       <button class="btn btn-add" onclick="openAddModal()">＋ 시간대 추가</button>
       <input type="file" id="importFile" accept="application/json,.json" style="display:none" onchange="importDataFromFile(this)">
     </div>
@@ -392,6 +397,7 @@
     <div class="cloud-btns">
       <button class="btn btn-reset" onclick="cloudConnect()">🔌 연결/저장 후 동기화</button>
       <button class="btn btn-reset" onclick="cloudAutoSync()">🔄 병합 동기화</button>
+      <button class="btn btn-reset" onclick="cloudVersionCheck()">🔎 저장본 버전 확인</button>
       <button class="btn btn-reset" onclick="cloudPush()">📌 이 기기를 최종본으로 올리기</button>
       <button class="btn btn-reset" onclick="cloudPull()">⬇ 클라우드 최종본 받기</button>
       <button class="btn btn-danger" onclick="cloudDisconnect()">연결 해제</button>
@@ -405,7 +411,25 @@
   </div>
 </div>
 
+<!-- DEVELOPER INFO MODAL -->
+<div class="modal-overlay" id="devOverlay">
+  <div class="modal">
+    <button class="modal-x" onclick="closeDevInfo()" aria-label="닫기" title="닫기">✕</button>
+    <h3>개발자 정보</h3>
+    <div class="dev-info-list" id="devInfoBody"></div>
+    <div class="update-history" id="updateHistoryBody"></div>
+  </div>
+</div>
+
 <script>
+const APP_NAME='Dr. Bugeon의 학습계획표';
+const APP_VERSION='2026.06.22 최종본 동기화 전수점검 보강';
+const APP_UPDATED_AT='2026-06-22 08:05';
+const APP_FILE_FALLBACK='260622_08.05 Dr. Bugeon의 학습계획표_동기화전수점검보강.html';
+const UPDATE_HISTORY=[
+  '2026-06-22: 최종본 기준 동기화를 전체 모드로 확장하고 저장본 버전 확인을 추가했습니다.',
+  '2026-06-22: 백업 복원 시 updated_at 보존, tombstone 보정, 자동 업로드 차단을 반영했습니다.'
+];
 const LEGACY_SCHEDULE_KEY='study_plan_v5', LEGACY_GOALS_KEY='study_goals_v1', ACTIVE_MODE_KEY='study_plan_active_mode_v1';
 const CHECKS_KEY='study_plan_checks_v1';  // {dateStr: {blockKey: checkRecord}}
 const TOMBSTONES_KEY='study_plan_tombstones_v1';
@@ -416,6 +440,7 @@ const MODE_CONFIG={
   holiday:{label:'휴일 및 공강'},
   vacation:{label:'방학 중'}
 };
+const MODE_KEYS=Object.keys(MODE_CONFIG);
 const CATEGORIES=[
   {id:'sleep',    icon:'🛌', label:'수면',       cls:'cat-sleep'},
   {id:'rest',     icon:'☕', label:'휴식',       cls:'cat-rest'},
@@ -491,10 +516,35 @@ function normalizeGoalsList(items,mode=currentMode){
   return (Array.isArray(items)?items:[]).map((g,i)=>normalizeGoalRecord(g,i,mode)).filter(g=>g.text&&!g.deleted_at);
 }
 function loadTombstones(){
-  try{ return JSON.parse(localStorage.getItem(TOMBSTONES_KEY))||[]; }catch{ return []; }
+  try{ return normalizeTombstones(JSON.parse(localStorage.getItem(TOMBSTONES_KEY))||[]); }catch{ return []; }
 }
 function saveTombstones(rows){
-  try{ localStorage.setItem(TOMBSTONES_KEY,JSON.stringify(rows)); }catch(e){}
+  try{ localStorage.setItem(TOMBSTONES_KEY,JSON.stringify(normalizeTombstones(rows))); }catch(e){}
+}
+function normalizeTombstone(row){
+  if(!row||!row.id) return null;
+  const deletedAt=row.deleted_at||row.deletedAt||null;
+  const updatedAt=row.updated_at||row.updatedAt||deletedAt||row.created_at||row.createdAt||nowIso();
+  return {
+    ...row,
+    created_at:row.created_at||row.createdAt||updatedAt,
+    updated_at:updatedAt,
+    deleted_at:deletedAt||updatedAt
+  };
+}
+function normalizeTombstones(rows){
+  const map=new Map();
+  (Array.isArray(rows)?rows:[]).forEach(row=>{
+    const normalized=normalizeTombstone(row);
+    if(!normalized) return;
+    map.set(normalized.id,newerRecord(map.get(normalized.id),normalized));
+  });
+  return Array.from(map.values()).sort((a,b)=>new Date(b.updated_at||0)-new Date(a.updated_at||0));
+}
+function newerRecord(a,b){
+  if(!a) return b;
+  if(!b) return a;
+  return new Date(a.updated_at||0)>=new Date(b.updated_at||0)?a:b;
 }
 function addTombstone(type,mode,record,ts=nowIso()){
   if(!record||!record.id) return;
@@ -922,7 +972,7 @@ function updateUI(){
     tr.classList.toggle('active-row', s===block && !isDone(s));
   });
   const checks=getDateChecks(viewDate);
-  const doneCount=schedule.filter(s=>!!checks[blockKey(s)]).length;
+  const doneCount=schedule.filter(s=>isDone(s)).length;
   const total=schedule.length;
   const pct=total?Math.round(doneCount/total*100):0;
   const isToday=dateKey(viewDate)===todayStr();
@@ -950,8 +1000,7 @@ function updateDateNav(){
   document.getElementById('dateNavMain').textContent=
     `${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일 (${DAYS[d.getDay()]})`;
   document.getElementById('dateNavSub').textContent= isToday?'오늘':'';
-  const ch=getDateChecks(viewDate);
-  const done=schedule.filter(s=>!!ch[blockKey(s)]).length;
+  const done=schedule.filter(s=>isDone(s)).length;
   document.getElementById('dateNavProgress').textContent=
     done>0?`✓ ${done}/${schedule.length} 완료`:'';
 }
@@ -1116,7 +1165,9 @@ function resetSchedule(){
 function makeBackupPayload(){
   return {
     app:'study_plan_app',
-    version:2,
+    appName:APP_NAME,
+    version:3,
+    appVersion:APP_VERSION,
     mode:currentMode,
     modeLabel:MODE_CONFIG[currentMode].label,
     exportedAt:new Date().toISOString(),
@@ -1126,12 +1177,15 @@ function makeBackupPayload(){
     tombstones:loadTombstones()
   };
 }
+function safeFileName(value){
+  return String(value||'').replace(/[\\/:*?"<>|]/g,'').replace(/\s+/g,'_').slice(0,120);
+}
 function exportData(){
   const blob=new Blob([JSON.stringify(makeBackupPayload(),null,2)],{type:'application/json'});
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');
   a.href=url;
-  a.download=`study-plan-${currentMode}-backup-${new Date().toISOString().slice(0,10)}.json`;
+  a.download=safeFileName(`${todayStr()}_${APP_NAME}_${MODE_CONFIG[currentMode].label}_백업`)+'.json';
   document.body.appendChild(a);
   a.click();
   a.remove();
@@ -1140,6 +1194,17 @@ function exportData(){
 }
 function normalizeImportedBlock(raw,i){
   return normalizeScheduleBlock(raw||{},i,currentMode);
+}
+function normalizeImportedChecks(rawChecks){
+  const normalized={};
+  Object.keys(rawChecks||{}).forEach(dk=>{
+    Object.keys(rawChecks[dk]||{}).forEach(bk=>{
+      const rec=normalizeCheckRecord(rawChecks[dk][bk],dk,bk);
+      if(!normalized[rec.date]) normalized[rec.date]={};
+      normalized[rec.date][rec.block_id]=rec;
+    });
+  });
+  return normalized;
 }
 function importDataFromFile(input){
   const file=input.files&&input.files[0];
@@ -1155,17 +1220,21 @@ function importDataFromFile(input){
       if(errs.length) throw new Error(errs[0]);
       if(!confirm(`백업 파일의 일정과 목표로 현재 ${MODE_CONFIG[currentMode].label} 데이터를 바꿀까요?`)) return;
       const ts=nowIso();
+      suppressAutoSync=true;
       schedule.forEach(b=>addTombstone('schedule',currentMode,b,ts));
       goals.forEach(g=>addTombstone('goal',currentMode,g,ts));
-      schedule=importedSchedule.map(b=>touchScheduleBlock(b,ts));
-      goals=importedGoals.map(g=>({...g,updated_at:ts,deleted_at:null}));
-      if(data.checks) saveAllChecks(data.checks);
-      if(Array.isArray(data.tombstones)) saveTombstones(data.tombstones);
-      sortSchedule(); saveSchedule(); saveGoals(); renderTable(); renderGoals(); updateUI();
-      setStorageStatus('백업을 불러와 브라우저에 저장됨');
+      schedule=importedSchedule;
+      goals=importedGoals;
+      if(data.checks) saveAllChecks(normalizeImportedChecks(data.checks));
+      if(Array.isArray(data.tombstones)) saveTombstones([...loadTombstones(),...normalizeTombstones(data.tombstones)]);
+      sortSchedule(); saveSchedule(); saveGoals();
+      suppressAutoSync=false;
+      renderTable(); renderGoals(); updateUI();
+      setStorageStatus('백업을 로컬에 반영했습니다. 원격 반영은 병합 동기화 또는 최종본 올리기를 선택하세요.');
     }catch(e){
       alert(`백업 파일을 불러오지 못했습니다: ${e.message}`);
     }finally{
+      suppressAutoSync=false;
       input.value='';
     }
   };
@@ -1327,21 +1396,45 @@ document.getElementById('goalsInput').addEventListener('keydown',e=>{if(e.key===
 const SB_CFG_KEY='study_plan_sb_cfg_v1';
 const SB_TABLE='study_plan_records';
 const SB_META_TABLE='language_sync_meta';
-let sbClient=null, sbCfg=null, cloudSyncTimer=null, suppressAutoSync=false, syncInFlight=false;
+let sbClient=null, sbCfg=null, cloudSyncTimer=null, suppressAutoSync=false, syncInFlight=false, syncPromise=null;
 
 const SQL_TEXT=`-- Supabase SQL Editor에서 1회 실행
 create table if not exists study_plan_records (
-  id text primary key,
+  id text not null,
   sync_id text not null,
   type text not null,
   mode text not null,
   payload jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  deleted_at timestamptz
+  deleted_at timestamptz,
+  constraint study_plan_records_sync_id_id_pk primary key (sync_id, id)
 );
 create index if not exists study_plan_records_sync_mode_updated_idx
   on study_plan_records (sync_id, mode, updated_at desc);
+
+-- 기존 버전에서 id 단독 primary key로 만든 경우를 위한 보정
+do $$
+declare
+  pk_name text;
+begin
+  select conname into pk_name
+  from pg_constraint
+  where conrelid='study_plan_records'::regclass and contype='p';
+
+  if pk_name is not null and pk_name <> 'study_plan_records_sync_id_id_pk' then
+    execute format('alter table study_plan_records drop constraint %I', pk_name);
+  end if;
+
+  if not exists (
+    select 1 from pg_constraint
+    where conrelid='study_plan_records'::regclass
+      and conname='study_plan_records_sync_id_id_pk'
+  ) then
+    alter table study_plan_records
+      add constraint study_plan_records_sync_id_id_pk primary key (sync_id, id);
+  end if;
+end $$;
 
 create table if not exists language_sync_meta (
   key text primary key,
@@ -1459,26 +1552,32 @@ function syncRowFromRecord(type,mode,record){
     deleted_at:record.deleted_at||null
   };
 }
-function getLocalSyncRows(){
+function getLocalSyncRows(mode=currentMode){
   const rows=[];
-  normalizeScheduleList(schedule,currentMode).forEach(b=>rows.push(syncRowFromRecord('schedule',currentMode,b)));
-  normalizeGoalsList(goals,currentMode).forEach(g=>rows.push(syncRowFromRecord('goal',currentMode,g)));
+  const modeSchedule=mode===currentMode ? schedule : loadSchedule(mode);
+  const modeGoals=mode===currentMode ? goals : loadGoals(mode);
+  normalizeScheduleList(modeSchedule,mode).forEach(b=>rows.push(syncRowFromRecord('schedule',mode,b)));
+  normalizeGoalsList(modeGoals,mode).forEach(g=>rows.push(syncRowFromRecord('goal',mode,g)));
   const checks=loadAllChecks();
   Object.keys(checks).forEach(dk=>{
     Object.keys(checks[dk]||{}).forEach(bk=>{
       const rec=normalizeCheckRecord(checks[dk][bk],dk,bk);
-      if(rec.mode===currentMode) rows.push(syncRowFromRecord('check',currentMode,rec));
+      if(rec.mode===mode) rows.push(syncRowFromRecord('check',mode,rec));
     });
   });
-  loadTombstones().filter(r=>r.mode===currentMode).forEach(r=>rows.push({...r,sync_id:sbCfg.device}));
+  loadTombstones().filter(r=>r.mode===mode).forEach(r=>rows.push({...r,sync_id:sbCfg.device}));
   return rows;
 }
-async function fetchCloudRows(){
-  const {data,error}=await sbClient.from(SB_TABLE)
+function getAllLocalSyncRows(){
+  return MODE_KEYS.flatMap(mode=>getLocalSyncRows(mode));
+}
+async function fetchCloudRows(mode=currentMode){
+  let query=sbClient.from(SB_TABLE)
     .select('id,sync_id,type,mode,payload,created_at,updated_at,deleted_at')
     .eq('sync_id',sbCfg.device)
-    .eq('mode',currentMode)
     .order('updated_at',{ascending:false});
+  if(mode) query=query.eq('mode',mode);
+  const {data,error}=await query;
   if(error) throw error;
   return data||[];
 }
@@ -1491,6 +1590,36 @@ async function fetchCanonicalVersion(){
 async function setCanonicalVersion(value){
   await restUpsert(SB_META_TABLE,[{key:canonicalMetaKey(),value,updated_at:nowIso()}],'key');
   setLastCanonical(sbCfg.device,value);
+}
+function deviceLabel(){
+  const ua=navigator.userAgent||'';
+  const platform=navigator.userAgentData&&navigator.userAgentData.platform ? navigator.userAgentData.platform : (navigator.platform||'Unknown OS');
+  const kind=/Mobi|Android|iPhone/i.test(ua) ? '핸드폰' : (/iPad|Tablet/i.test(ua) ? '태블릿' : 'PC');
+  return `${kind} · ${platform} · ${deviceInstanceId().slice(-8)}`;
+}
+function parseCanonicalMeta(value){
+  if(!value) return null;
+  try{
+    const parsed=JSON.parse(value);
+    if(parsed&&typeof parsed==='object') return parsed;
+  }catch(e){}
+  const idx=String(value).lastIndexOf('_');
+  return {
+    revision:value,
+    saved_at:idx>0 ? String(value).slice(0,idx) : '',
+    device_id:idx>0 ? String(value).slice(idx+1) : '',
+    device_label:'구버전 저장본'
+  };
+}
+function canonicalLabel(value){
+  const meta=parseCanonicalMeta(value);
+  if(!meta) return 'canonical_version: 없음';
+  return [
+    `canonical_version/revision: ${meta.revision||value}`,
+    `저장 시각: ${meta.saved_at||'알 수 없음'}`,
+    `마지막 저장 기기: ${meta.device_label||'알 수 없음'} (${String(meta.device_id||'').slice(-8)||'id 없음'})`,
+    `manifest/hash: ${meta.manifest_hash||'구버전 메타 없음'}`
+  ].join('\n');
 }
 function newerRow(a,b){
   if(!a) return b;
@@ -1512,51 +1641,93 @@ function rowToCheck(row){
   const p=row.payload||{};
   return normalizeCheckRecord({id:row.id,mode:row.mode,date:p.date,block_id:p.block_id,checked:!!p.checked,created_at:row.created_at,updated_at:row.updated_at,deleted_at:row.deleted_at},p.date,p.block_id);
 }
-function applyRowsToLocal(rows){
-  const active=rows.filter(r=>r.mode===currentMode&&!r.deleted_at);
-  const deleted=rows.filter(r=>r.mode===currentMode&&r.deleted_at);
-  const nextSchedule=active.filter(r=>r.type==='schedule').map(rowToSchedule);
-  const nextGoals=active.filter(r=>r.type==='goal').map(rowToGoal);
-  const nextChecks={};
-  rows.filter(r=>r.mode===currentMode&&r.type==='check').forEach(r=>{
-    const rec=rowToCheck(r); if(!rec.date||!rec.block_id) return;
-    if(!nextChecks[rec.date]) nextChecks[rec.date]={};
-    nextChecks[rec.date][rec.block_id]=rec;
+function pruneChecksForMode(allChecks,mode){
+  Object.keys(allChecks).forEach(dk=>{
+    Object.keys(allChecks[dk]||{}).forEach(bk=>{
+      const rec=normalizeCheckRecord(allChecks[dk][bk],dk,bk);
+      if(rec.mode===mode) delete allChecks[dk][bk];
+    });
+    if(!Object.keys(allChecks[dk]||{}).length) delete allChecks[dk];
   });
-  const otherTombstones=loadTombstones().filter(r=>r.mode!==currentMode);
+}
+function applyRowsToLocal(rows,mode=currentMode){
+  const targetModes=mode ? [mode] : MODE_KEYS;
+  const checks=loadAllChecks();
+  const keepTombstones=loadTombstones().filter(r=>!targetModes.includes(r.mode));
+  const nextTombstones=[...keepTombstones];
   suppressAutoSync=true;
-  schedule=nextSchedule.sort((a,b)=>a.start-b.start);
-  goals=nextGoals;
-  saveTombstones([...otherTombstones,...deleted]);
-  localStorage.setItem(scheduleKey(),JSON.stringify(schedule));
-  localStorage.setItem(goalsKey(),JSON.stringify(goals));
-  localStorage.setItem(CHECKS_KEY,JSON.stringify(nextChecks));
+  targetModes.forEach(m=>{
+    const modeRows=rows.filter(r=>r.mode===m);
+    const active=modeRows.filter(r=>!r.deleted_at);
+    const deleted=modeRows.filter(r=>r.deleted_at);
+    const nextSchedule=active.filter(r=>r.type==='schedule').map(rowToSchedule).sort((a,b)=>a.start-b.start);
+    const nextGoals=active.filter(r=>r.type==='goal').map(rowToGoal);
+    pruneChecksForMode(checks,m);
+    modeRows.filter(r=>r.type==='check').forEach(r=>{
+      const rec=rowToCheck(r); if(!rec.date||!rec.block_id) return;
+      if(!checks[rec.date]) checks[rec.date]={};
+      checks[rec.date][rec.block_id]=rec;
+    });
+    nextTombstones.push(...deleted);
+    localStorage.setItem(scheduleKey(m),JSON.stringify(nextSchedule));
+    localStorage.setItem(goalsKey(m),JSON.stringify(nextGoals));
+    if(m===currentMode){
+      schedule=nextSchedule;
+      goals=nextGoals;
+    }
+  });
+  saveTombstones(nextTombstones);
+  localStorage.setItem(CHECKS_KEY,JSON.stringify(checks));
   suppressAutoSync=false;
   renderTable(); renderGoals(); updateUI(); updateDateNav();
 }
+function stableRowsForManifest(rows){
+  return rows.map(r=>({
+    id:r.id,sync_id:r.sync_id,type:r.type,mode:r.mode,
+    payload:r.payload||{},created_at:r.created_at||'',updated_at:r.updated_at||'',deleted_at:r.deleted_at||null
+  })).sort((a,b)=>`${a.mode}|${a.type}|${a.id}`.localeCompare(`${b.mode}|${b.type}|${b.id}`));
+}
+async function hashRows(rows){
+  const text=JSON.stringify(stableRowsForManifest(rows));
+  if(window.crypto&&crypto.subtle&&window.TextEncoder){
+    const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text));
+    return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('').slice(0,16);
+  }
+  return stableHash(text);
+}
+function summarizeRows(rows){
+  const active=rows.filter(r=>!r.deleted_at);
+  const deleted=rows.filter(r=>r.deleted_at);
+  const byMode=MODE_KEYS.map(mode=>`${MODE_CONFIG[mode].label} ${active.filter(r=>r.mode===mode).length}`).join(' · ');
+  return `전체 ${rows.length}개 / 활성 ${active.length}개 / 삭제 ${deleted.length}개\n모드별 활성: ${byMode}`;
+}
 async function cloudAutoSync(silent=false){
   if(!sbClient||!sbCfg){ if(!silent) setCloudStatus('먼저 연결하세요','err'); return; }
-  if(syncInFlight) return;
+  if(syncPromise) return syncPromise;
   syncInFlight=true;
-  try{
-    if(!silent) setCloudStatus('병합 동기화 중...');
-    const remoteCanonical=await fetchCanonicalVersion();
-    const localCanonical=getLastCanonical(sbCfg.device);
-    const cloudRows=await fetchCloudRows();
-    if(remoteCanonical&&remoteCanonical!==localCanonical){
-      applyRowsToLocal(cloudRows);
-      setLastCanonical(sbCfg.device,remoteCanonical);
-      setCloudStatus('✓ 클라우드 최종본을 이 기기에 반영함','ok');
-      setStorageStatus('최종본 기준 동기화 완료');
-      return;
-    }
-    const merged=mergeRows(getLocalSyncRows(),cloudRows);
-    applyRowsToLocal(merged);
-    await restUpsert(SB_TABLE,merged,'id');
-    setCloudStatus(`✓ 병합 동기화 완료 · ${merged.length}개 레코드`,'ok');
-    setStorageStatus('클라우드 병합 동기화 완료');
-  }catch(e){ setCloudStatus('동기화 실패: '+e.message,'err'); }
-  finally{ syncInFlight=false; }
+  syncPromise=(async()=>{
+    try{
+      if(!silent) setCloudStatus('병합 동기화 중...');
+      const remoteCanonical=await fetchCanonicalVersion();
+      const localCanonical=getLastCanonical(sbCfg.device);
+      if(remoteCanonical&&remoteCanonical!==localCanonical){
+        const cloudRows=await fetchCloudRows(null);
+        applyRowsToLocal(cloudRows,null);
+        setLastCanonical(sbCfg.device,remoteCanonical);
+        setCloudStatus('✓ 클라우드 최종본을 이 기기에 반영함','ok');
+        setStorageStatus('최종본 기준 동기화 완료');
+        return;
+      }
+      const cloudRows=await fetchCloudRows(currentMode);
+      const merged=mergeRows(getLocalSyncRows(currentMode),cloudRows);
+      applyRowsToLocal(merged,currentMode);
+      await restUpsert(SB_TABLE,merged,'sync_id,id');
+      setCloudStatus(`✓ 병합 동기화 완료 · ${merged.length}개 레코드`,'ok');
+      setStorageStatus('클라우드 병합 동기화 완료');
+    }catch(e){ setCloudStatus('동기화 실패: '+e.message,'err'); }
+    finally{ syncInFlight=false; syncPromise=null; }
+  })();
+  return syncPromise;
 }
 function queueAutoSync(){
   if(suppressAutoSync||!sbClient||!sbCfg) return;
@@ -1565,40 +1736,91 @@ function queueAutoSync(){
 }
 async function cloudPush(){
   if(!sbClient||!sbCfg){ setCloudStatus('먼저 연결하세요','err'); return; }
-  setCloudStatus('이 기기를 최종본으로 지정하는 중...');
+  setCloudStatus('이 기기를 전체 모드 최종본으로 지정하는 중...');
   try{
     const ts=nowIso();
-    const cloudRows=await fetchCloudRows();
-    const localRows=getLocalSyncRows();
+    const cloudRows=await fetchCloudRows(null);
+    const localRows=getAllLocalSyncRows();
     const localIds=new Set(localRows.map(r=>r.id));
     const cloudOnlyDeletes=cloudRows
       .filter(r=>!localIds.has(r.id)&&!r.deleted_at)
       .map(r=>({...r,updated_at:ts,deleted_at:ts}));
     const finalRows=mergeRows(localRows,cloudOnlyDeletes);
-    await restUpsert(SB_TABLE,finalRows,'id');
-    const version=`${ts}_${deviceInstanceId()}`;
+    await restUpsert(SB_TABLE,finalRows,'sync_id,id');
+    const manifestHash=await hashRows(finalRows);
+    const version=JSON.stringify({
+      revision:`${ts}_${deviceInstanceId()}`,
+      saved_at:ts,
+      device_id:deviceInstanceId(),
+      device_label:deviceLabel(),
+      scope:'all_modes',
+      rows:finalRows.length,
+      manifest_hash:manifestHash
+    });
     await setCanonicalVersion(version);
-    applyRowsToLocal(finalRows);
-    setCloudStatus(`✓ 이 기기를 최종본으로 올림 · canonical_version 갱신`,'ok');
-    setStorageStatus('이 기기 기준 최종본 업로드 완료');
+    applyRowsToLocal(finalRows,null);
+    setCloudStatus(`✓ 이 기기를 전체 모드 최종본으로 올림 · canonical_version 갱신\n${canonicalLabel(version)}`,'ok');
+    setStorageStatus('이 기기 기준 전체 모드 최종본 업로드 완료');
   }catch(e){ setCloudStatus('최종본 올리기 실패: '+e.message,'err'); }
 }
 async function cloudPull(){
   if(!sbClient||!sbCfg){ setCloudStatus('먼저 연결하세요','err'); return; }
-  setCloudStatus('클라우드 최종본을 받는 중...');
+  setCloudStatus('클라우드 전체 모드 최종본을 받는 중...');
   try{
-    const cloudRows=await fetchCloudRows();
+    const cloudRows=await fetchCloudRows(null);
     const remoteCanonical=await fetchCanonicalVersion();
-    applyRowsToLocal(cloudRows);
+    applyRowsToLocal(cloudRows,null);
     if(remoteCanonical) setLastCanonical(sbCfg.device,remoteCanonical);
-    setCloudStatus(`✓ 클라우드 기준 반영 완료 · 로컬 전용 항목 보존 안 함`,'ok');
-    setStorageStatus('클라우드 최종본 기준으로 받음');
+    setCloudStatus(`✓ 클라우드 전체 기준 반영 완료 · 로컬 전용 항목 보존 안 함\n${canonicalLabel(remoteCanonical)}`,'ok');
+    setStorageStatus('클라우드 전체 최종본 기준으로 받음');
   }catch(e){ setCloudStatus('받기 실패: '+e.message,'err'); }
+}
+
+async function cloudVersionCheck(){
+  if(!sbClient||!sbCfg){ setCloudStatus('먼저 연결하세요','err'); return; }
+  setCloudStatus('저장본 버전 확인 중...');
+  try{
+    const cloudRows=await fetchCloudRows(null);
+    const localRows=getAllLocalSyncRows();
+    const remoteCanonical=await fetchCanonicalVersion();
+    const cloudHash=await hashRows(cloudRows);
+    const localHash=await hashRows(localRows);
+    const location=`Supabase ${SB_TABLE} / ${SB_META_TABLE}.${canonicalMetaKey()}`;
+    setCloudStatus([
+      '저장본 버전 확인',
+      `최종 저장 위치: ${location}`,
+      canonicalLabel(remoteCanonical),
+      `클라우드 항목 수: ${summarizeRows(cloudRows)}`,
+      `로컬 화면 캐시 항목 수: ${summarizeRows(localRows)}`,
+      `현재 클라우드 manifest/hash: ${cloudHash}`,
+      `현재 로컬 manifest/hash: ${localHash}`,
+      cloudHash===localHash?'검증 결과: 클라우드와 로컬이 같습니다.':'검증 결과: 클라우드와 로컬이 다릅니다.'
+    ].join('\n'),'ok');
+  }catch(e){ setCloudStatus('저장본 버전 확인 실패: '+e.message,'err'); }
 }
 
 function copySQL(){
   navigator.clipboard.writeText(SQL_TEXT).then(()=>setCloudStatus('SQL 복사됨','ok'),
     ()=>setCloudStatus('복사 실패 — 수동 선택하세요','err'));
+}
+
+function openDevInfo(){
+  const currentFile=APP_FILE_FALLBACK;
+  document.getElementById('devInfoBody').innerHTML=[
+    `<div><strong>앱 이름</strong><br>${escapeHTML(APP_NAME)}</div>`,
+    `<div><strong>버전</strong><br>${escapeHTML(APP_VERSION)}</div>`,
+    `<div><strong>코드 최종 수정 시각</strong><br>${escapeHTML(APP_UPDATED_AT)}</div>`,
+    `<div><strong>현재 파일명/저장본</strong><br>${escapeHTML(currentFile)}</div>`
+  ].join('');
+  const latest=UPDATE_HISTORY.slice(0,2).map(item=>`<div>${escapeHTML(item)}</div>`).join('');
+  const older=UPDATE_HISTORY.slice(2).map(item=>`<div>${escapeHTML(item)}</div>`).join('');
+  document.getElementById('updateHistoryBody').innerHTML=
+    `<strong>업데이트 이력</strong>${latest}`+
+    (older?`<details><summary>과거 이력</summary>${older}</details>`:'');
+  document.getElementById('devOverlay').classList.add('open');
+}
+function closeDevInfo(){
+  document.getElementById('devOverlay').classList.remove('open');
 }
 
 // ─── INIT ─────────────────────────────────────────────
