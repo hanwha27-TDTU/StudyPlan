@@ -305,7 +305,7 @@
 
   <div class="goals-section">
     <div class="goals-header">
-      <div class="goals-title">🎯 오늘의 공부 목표</div>
+      <div class="goals-title">🎯 공부 목표</div>
       <div class="goals-date" id="goalsDate"></div>
     </div>
     <div class="goals-input-wrap">
@@ -485,10 +485,12 @@
 
 <script>
 const APP_NAME='Dr. Bugeon의 학습계획표';
-const APP_VERSION='2026.06.22 반응형통계백업복원보강';
-const APP_UPDATED_AT='2026-06-22 08:32';
-const APP_FILE_FALLBACK='260622_08.32 Dr. Bugeon의 학습계획표_반응형통계백업복원보강.html';
+const APP_VERSION='2026.06.28 체크갱신·시계·UX보강';
+const APP_UPDATED_AT='2026-06-28';
+const APP_FILE_FALLBACK='260628 Dr. Bugeon의 학습계획표_체크갱신시계UX보강.html';
 const UPDATE_HISTORY=[
+  '2026-06-28: 완료 체크 시 상단 진행률·날짜별 성취·시계 표시가 즉시 갱신되도록 수정하고, 시계 바늘을 1초마다 부드럽게 돌렸습니다.',
+  '2026-06-28: ESC로 모달 닫기, 빈 시간대 안내 배너, 과거 날짜 열람 시 진행중 강조 정리 등 UX를 보강했습니다.',
   '2026-06-22: 모바일·태블릿 카드형 일정 표시, 체크 원 축소, 구분별 시간 합계와 날짜별 성취 통계를 추가했습니다.',
   '2026-06-22: 전체 모드 백업/복원과 개발자 정보 표시를 보강했습니다.',
   '2026-06-22: 최종본 기준 동기화를 전체 모드로 확장하고 저장본 버전 확인을 추가했습니다.',
@@ -688,7 +690,7 @@ function loadAllChecks(){
 function saveAllChecks(all){
   try{ localStorage.setItem(CHECKS_KEY,JSON.stringify(all)); queueAutoSync(); }catch(e){}
 }
-function getDateChecks(d){ const all=loadAllChecks(); return all[dateKey(d)]||{}; }
+function getDateChecks(d,all){ all=all||loadAllChecks(); return all[dateKey(d)]||{}; }
 function toggleCheck(s){
   const all=loadAllChecks(); const dk=dateKey(viewDate); const bk=blockKey(s); const ts=nowIso();
   if(!all[dk]) all[dk]={};
@@ -696,14 +698,15 @@ function toggleCheck(s){
   const nextChecked=!(current.checked&&!current.deleted_at);
   all[dk][bk]={...current,checked:nextChecked,updated_at:ts,deleted_at:nextChecked?null:ts};
   saveAllChecks(all);
-  renderTable(); updateDateNav();
+  renderTable(); updateDateNav(); updateUI();   // updateUI: 상단 진행률·7일 성취·시계 ✓도 즉시 갱신
 }
-function isDone(s){
-  const ch=getDateChecks(viewDate)[blockKey(s)];
+function isDone(s,all){
+  const ch=getDateChecks(viewDate,all)[blockKey(s)];
   return typeof ch==='boolean' ? ch : !!(ch&&ch.checked&&!ch.deleted_at);
 }
-// Keep tombstones so a deleted or unchecked state can reach other devices.
-function pruneOldChecks(){ saveAllChecks(loadAllChecks()); }
+// Re-normalize stored check records on load. Deletes nothing — tombstones are
+// kept so an unchecked/deleted state can still reach other devices.
+function normalizeStoredChecks(){ saveAllChecks(loadAllChecks()); }
 
 function setStorageStatus(msg){
   const el=document.getElementById('storageStatus');
@@ -1020,7 +1023,7 @@ function inBlock(seg, h){
 }
 function getCurrentBlock(){
   const h=new Date().getHours()+new Date().getMinutes()/60;
-  return schedule.find(s=>inBlock(s,h))||schedule[0];
+  return schedule.find(s=>inBlock(s,h))||null;   // 빈 시간대면 null (이전: 첫 블록으로 잘못 폴백)
 }
 
 // ─── UI UPDATE ────────────────────────────────────────
@@ -1028,24 +1031,31 @@ function updateUI(){
   const now=new Date();
   const hh=String(now.getHours()).padStart(2,'0'), mm=String(now.getMinutes()).padStart(2,'0');
   document.getElementById('clockTimeDisplay').textContent=`${hh}:${mm}`;
+  const allChecks=loadAllChecks();                 // 한 번만 파싱해서 재사용 (행마다 재파싱 제거)
+  const isToday=dateKey(viewDate)===todayStr();
   const block=getCurrentBlock();
+  const banner=document.getElementById('currentTaskBanner');
   if(block){
-    const banner=document.getElementById('currentTaskBanner');
     banner.style.borderLeftColor=block.color;
     const onTag=isOvernight(block)?'<span class="overnight-badge">야간</span>':'';
     banner.innerHTML=`
       <div class="banner-time">${hToStr(block.start)} – ${hToStr(block.end)}${isOvernight(block)?' (익일)':''} · 현재 진행 중</div>
       <div class="banner-task">${escapeHTML(block.icon)} ${escapeHTML(block.task)}${onTag}</div>
       <div class="banner-strategy">${escapeHTML(block.strategy)}</div>`;
+  } else {
+    banner.style.borderLeftColor='var(--muted)';
+    banner.innerHTML=`
+      <div class="banner-time">${hh}:${mm} · 진행 중인 일정 없음</div>
+      <div class="banner-task">＋ 빈 시간대</div>
+      <div class="banner-strategy">일정 사이 빈 시간입니다. 자유롭게 활용하세요.</div>`;
   }
   document.querySelectorAll('#scheduleBody tr[data-idx]').forEach(tr=>{
     const s=schedule[parseInt(tr.dataset.idx)];
-    tr.classList.toggle('active-row', s===block && !isDone(s));
+    tr.classList.toggle('active-row', isToday && s===block && !isDone(s,allChecks));  // 오늘 볼 때만 진행중 강조
   });
-  const doneCount=schedule.filter(s=>isDone(s)).length;
+  const doneCount=schedule.filter(s=>isDone(s,allChecks)).length;
   const total=schedule.length;
   const pct=total?Math.round(doneCount/total*100):0;
-  const isToday=dateKey(viewDate)===todayStr();
   document.getElementById('progressSection').innerHTML=`
     <div class="progress-label">
       <span style="font-family:'Noto Serif KR',serif;font-weight:600">${isToday?'오늘':'해당일'} 완료율</span>
@@ -1054,7 +1064,7 @@ function updateUI(){
     <div class="progress-bar-bg"><div class="progress-bar-fill" style="width:${pct}%;background:linear-gradient(90deg,#6ab06a,#8aca6a)"></div></div>
     <div class="progress-segments">
       ${[...schedule].sort((a,b)=>a.start-b.start).map(s=>{
-        const done=isDoneOnDate(s,viewDate,loadAllChecks());
+        const done=isDoneOnDate(s,viewDate,allChecks);
         return `<div class="seg-item"><span class="color-dot" style="background:${done?'#6ab06a':safeColor(s.color)};${done?'outline:2px solid #5a9a5a;outline-offset:1px':''}"></span>${escapeHTML(s.label)}${done?' ✓':''}</div>`;
       }).join('')}
     </div>`;
@@ -1130,7 +1140,8 @@ function updateDateNav(){
   document.getElementById('dateNavMain').textContent=
     `${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일 (${DAYS[d.getDay()]})`;
   document.getElementById('dateNavSub').textContent= isToday?'오늘':'';
-  const done=schedule.filter(s=>isDone(s)).length;
+  const allChecks=loadAllChecks();
+  const done=schedule.filter(s=>isDone(s,allChecks)).length;
   document.getElementById('dateNavProgress').textContent=
     done>0?`✓ ${done}/${schedule.length} 완료`:'';
 }
@@ -1162,13 +1173,13 @@ function selectCat(id){
 function catInfo(id){ return CATEGORIES.find(c=>c.id===id)||CATEGORIES[2]; }
 function renderTable(){
   sortSchedule();
-  const isToday=dateKey(viewDate)===todayStr();
+  const allChecks=loadAllChecks();   // 행마다 재파싱하지 않도록 한 번만 로드
   document.getElementById('scheduleBody').innerHTML=schedule.map((s,i)=>{
     const on=isOvernight(s);
     const dur=segDuration(s);
     const durStr=`${Math.floor(dur)}h${Math.round((dur%1)*60)?Math.round((dur%1)*60)+'m':''}`;
     const cat=catInfo(s.category);
-    const done=isDone(s);
+    const done=isDone(s,allChecks);
     return `<tr data-idx="${i}"${done?' class="done-row"':''}>
       <td class="td-cat" data-label="구분">
         <span class="cat-badge ${cat.cls}">
@@ -1246,6 +1257,13 @@ function closeModal(){
   document.getElementById('modalOverlay').classList.remove('open');
   editingIdx=-1; isAdding=false; pStart=null; pEnd=null;
 }
+// ESC로 열려 있는 모달 닫기. 바깥 클릭은 입력 보호를 위해 막지만, 명시적 ESC는 허용한다.
+document.addEventListener('keydown',e=>{
+  if(e.key!=='Escape') return;
+  if(document.getElementById('modalOverlay').classList.contains('open')) closeModal();
+  else if(document.getElementById('cloudOverlay').classList.contains('open')) closeCloudModal();
+  else if(document.getElementById('devOverlay').classList.contains('open')) closeDevInfo();
+});
 
 function saveModal(){
   if(!pStart||!pEnd) return;                       // race guard (picker not built yet)
@@ -1332,11 +1350,11 @@ function exportData(){
   URL.revokeObjectURL(url);
   setStorageStatus('백업 파일 저장됨');
 }
-function normalizeImportedBlock(raw,i){
-  return normalizeScheduleBlock(raw||{},i,currentMode);
-}
 function normalizeImportedBlockForMode(raw,i,mode){
   return normalizeScheduleBlock(raw||{},i,mode);
+}
+function normalizeImportedBlock(raw,i){
+  return normalizeImportedBlockForMode(raw,i,currentMode);
 }
 function normalizeImportedChecks(rawChecks){
   const normalized={};
@@ -1530,14 +1548,18 @@ async function printA4(){
       @media print{html,body{margin:0!important;padding:0!important;} img{page-break-after:avoid;}}
     </style></head><body><img src="${imageUrl}" alt="Dr. Bugeon의 학습계획표"></body></html>`);
   printWindow.document.close();
-  printWindow.onload=()=>{printWindow.focus(); printWindow.print(); setTimeout(()=>printWindow.close(),500);};
+  printWindow.onload=()=>{
+    printWindow.focus();
+    printWindow.onafterprint=()=>printWindow.close();   // 인쇄 끝난 뒤 닫기 (이전: 0.5초 후 강제로 닫혀 인쇄가 잘리기도 함)
+    printWindow.print();
+  };
 }
 window.addEventListener('beforeprint',buildPrintSheet);
 
 // ─── GOALS ────────────────────────────────────────────
 function updateGoalsDate(){
-  const d=new Date();
-  document.getElementById('goalsDate').textContent=`${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일 (${DAYS[d.getDay()]})`;
+  // 목표는 날짜가 아니라 모드(학기중/휴일/방학)별로 저장되므로 해당 모드를 표시한다.
+  document.getElementById('goalsDate').textContent=`${MODE_CONFIG[currentMode].label} 공통`;
 }
 function renderGoals(){
   const w=document.getElementById('goalsTags');
@@ -1991,11 +2013,18 @@ function closeDevInfo(){
 }
 
 // ─── INIT ─────────────────────────────────────────────
-pruneOldChecks();
+function tickClock(){   // 시계 바늘만 가볍게 1초마다 갱신 (전체 UI 재렌더는 30초 유지)
+  const now=new Date();
+  document.getElementById('clockTimeDisplay').textContent=
+    `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+  drawClock();
+}
+normalizeStoredChecks();
 initSbFromCfg();
 updateModeUI(); updateGoalsDate(); renderGoals(); sortSchedule(); renderTable(); updateUI(); updateDateNav();
 setStorageStatus('브라우저 자동 저장 준비 완료');
-setInterval(updateUI,30000);
+setInterval(updateUI,30000);   // 배너·진행률·통계 등 전체 갱신
+setInterval(tickClock,1000);   // 초침이 끊기지 않도록 1초마다 시계 다시 그림
 </script>
 </body>
 </html>
