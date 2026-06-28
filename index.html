@@ -130,6 +130,28 @@
   .dev-info-list strong{color:var(--ink);}
   .update-history{font-size:0.75rem;line-height:1.65;color:var(--ink-light);margin-top:8px;}
   .update-history summary{cursor:pointer;color:var(--gold);font-weight:700;margin-top:6px;}
+  /* DEVELOPER INFO (redesigned) */
+  .dev-ver-chip{display:inline-block;font-size:0.72rem;font-weight:700;color:var(--gold);background:#f5f0e8;border:1px solid #e6dccd;border-radius:999px;padding:2px 11px;margin-left:8px;vertical-align:middle;letter-spacing:0.02em;}
+  .dev-id{display:flex;align-items:center;gap:14px;margin:4px 0 18px;}
+  .dev-id-icon{width:64px;height:64px;border-radius:16px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:2rem;background:linear-gradient(135deg,#c8a96e,#8a6f3e);box-shadow:0 4px 12px var(--shadow);}
+  .dev-id-name{font-family:'Noto Serif KR',serif;font-size:1.22rem;font-weight:700;color:var(--ink);line-height:1.25;}
+  .dev-id-by{font-size:0.8rem;color:var(--ink-light);margin-top:4px;}
+  .dev-cards{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:6px;}
+  .dev-card{border:1px solid var(--line);border-radius:12px;padding:12px 15px;background:var(--surface);}
+  .dev-card.full{grid-column:1/-1;}
+  .dev-card-label{font-size:0.7rem;font-weight:700;letter-spacing:0.04em;color:var(--muted);margin-bottom:5px;}
+  .dev-card-value{font-size:0.9rem;font-weight:700;color:var(--ink);word-break:break-all;}
+  .dev-hist-head{display:flex;align-items:baseline;gap:8px;margin:20px 0 11px;}
+  .dev-hist-title{font-family:'Noto Serif KR',serif;font-size:0.95rem;font-weight:700;color:var(--ink);}
+  .dev-hist-count{font-size:0.72rem;color:var(--muted);font-weight:700;}
+  .dev-hist-latest{background:#eef6e9;border:1px solid #cfe6c4;border-radius:13px;padding:13px 16px;margin-bottom:10px;}
+  .dev-hist-latest-title{font-size:0.85rem;font-weight:700;color:#4a7a42;margin-bottom:6px;}
+  .dev-hist-latest-body{font-size:0.78rem;color:var(--ink-light);line-height:1.6;}
+  .dev-hist-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .dev-hist-item{border:1px solid var(--line);border-radius:11px;padding:10px 13px;font-size:0.76rem;color:var(--ink-light);line-height:1.5;background:var(--surface);}
+  .dev-hist-more{width:100%;margin-top:9px;border:1px solid var(--line);border-radius:11px;background:#f3f6f9;color:var(--info);font-weight:700;font-size:0.8rem;padding:11px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;transition:background 0.15s;}
+  .dev-hist-more:hover{background:#e8eef4;}
+  @media(max-width:600px){.dev-cards,.dev-hist-grid{grid-template-columns:1fr;}}
   @keyframes modalIn{from{opacity:0;transform:scale(0.95) translateY(10px)}to{opacity:1;transform:scale(1) translateY(0)}}
   .modal h3{font-family:'Playfair Display',serif;font-size:1.15rem;margin-bottom:18px;}
 
@@ -477,17 +499,23 @@
 <div class="modal-overlay" id="devOverlay">
   <div class="modal">
     <button class="modal-x" onclick="closeDevInfo()" aria-label="닫기" title="닫기">✕</button>
-    <h3>개발자 정보</h3>
-    <div class="dev-info-list" id="devInfoBody"></div>
-    <div class="update-history" id="updateHistoryBody"></div>
+    <h3>🧑‍💻 개발자 정보 <span class="dev-ver-chip" id="devVerChip"></span></h3>
+    <div id="devInfoBody"></div>
+    <div id="updateHistoryBody"></div>
   </div>
 </div>
 
 <script>
 const APP_NAME='Dr. Bugeon의 학습계획표';
 const APP_VERSION='2026.06.28 체크갱신·시계·UX보강';
-const APP_UPDATED_AT='2026-06-28';
+const APP_UPDATED_AT='2026년 6월 28일';
 const APP_FILE_FALLBACK='260628 Dr. Bugeon의 학습계획표_체크갱신시계UX보강.html';
+// ── 개발자 정보(필요 시 이 값만 수정하세요) ──
+const APP_VERSION_SHORT='v1.1';
+const APP_DEVELOPER='김부건 (Kim Bugeon)';
+const APP_AFFILIATION='Tashkent State Medical University';
+const APP_CREATED_AT='2026년 6월 19일';
+const APP_ICON_EMOJI='📚';
 const UPDATE_HISTORY=[
   '2026-06-28: 완료 체크 시 상단 진행률·날짜별 성취·시계 표시가 즉시 갱신되도록 수정하고, 시계 바늘을 1초마다 부드럽게 돌렸습니다.',
   '2026-06-28: ESC로 모달 닫기, 빈 시간대 안내 배너, 과거 날짜 열람 시 진행중 강조 정리 등 UX를 보강했습니다.',
@@ -1993,20 +2021,50 @@ function copySQL(){
     ()=>setCloudStatus('복사 실패 — 수동 선택하세요','err'));
 }
 
+function splitHistory(entry){
+  const str=String(entry||'');
+  const i=str.indexOf(':');
+  return i>0 ? {head:str.slice(0,i).trim(), body:str.slice(i+1).trim()} : {head:'최신', body:str};
+}
 function openDevInfo(){
-  const currentFile=APP_FILE_FALLBACK;
-  document.getElementById('devInfoBody').innerHTML=[
-    `<div><strong>앱 이름</strong><br>${escapeHTML(APP_NAME)}</div>`,
-    `<div><strong>버전</strong><br>${escapeHTML(APP_VERSION)}</div>`,
-    `<div><strong>코드 최종 수정 시각</strong><br>${escapeHTML(APP_UPDATED_AT)}</div>`,
-    `<div><strong>현재 파일명/저장본</strong><br>${escapeHTML(currentFile)}</div>`
-  ].join('');
-  const latest=UPDATE_HISTORY.slice(0,2).map(item=>`<div>${escapeHTML(item)}</div>`).join('');
-  const older=UPDATE_HISTORY.slice(2).map(item=>`<div>${escapeHTML(item)}</div>`).join('');
-  document.getElementById('updateHistoryBody').innerHTML=
-    `<strong>업데이트 이력</strong>${latest}`+
-    (older?`<details><summary>과거 이력</summary>${older}</details>`:'');
+  document.getElementById('devVerChip').textContent=APP_VERSION_SHORT;
+  document.getElementById('devInfoBody').innerHTML=`
+    <div class="dev-id">
+      <div class="dev-id-icon">${APP_ICON_EMOJI}</div>
+      <div>
+        <div class="dev-id-name">${escapeHTML(APP_NAME)}</div>
+        <div class="dev-id-by">${escapeHTML(APP_DEVELOPER)} · ${escapeHTML(APP_AFFILIATION)}</div>
+      </div>
+    </div>
+    <div class="dev-cards">
+      <div class="dev-card"><div class="dev-card-label">최초 개발</div><div class="dev-card-value">${escapeHTML(APP_CREATED_AT)}</div></div>
+      <div class="dev-card"><div class="dev-card-label">코드 최종 수정</div><div class="dev-card-value">${escapeHTML(APP_UPDATED_AT)}</div></div>
+      <div class="dev-card full"><div class="dev-card-label">현재 파일명</div><div class="dev-card-value">${escapeHTML(APP_FILE_FALLBACK)}</div></div>
+    </div>`;
+  const total=UPDATE_HISTORY.length;
+  const latest=splitHistory(UPDATE_HISTORY[0]);
+  const recent=UPDATE_HISTORY.slice(1,5).map(it=>`<div class="dev-hist-item">${escapeHTML(it)}</div>`).join('');
+  const rest=UPDATE_HISTORY.slice(5);
+  const restGrid=rest.map(it=>`<div class="dev-hist-item">${escapeHTML(it)}</div>`).join('');
+  document.getElementById('updateHistoryBody').innerHTML=`
+    <div class="dev-hist-head">
+      <span class="dev-hist-title">업데이트 이력</span>
+      <span class="dev-hist-count">전체 ${total}건</span>
+    </div>
+    <div class="dev-hist-latest">
+      <div class="dev-hist-latest-title">최신 · ${escapeHTML(latest.head)}</div>
+      <div class="dev-hist-latest-body">${escapeHTML(latest.body)}</div>
+    </div>
+    ${recent?`<div class="dev-hist-grid">${recent}</div>`:''}
+    ${rest.length?`<button class="dev-hist-more" id="devHistMoreBtn" onclick="toggleDevHistMore()">이전 업데이트 ${rest.length}건 펼치기</button><div class="dev-hist-grid" id="devHistMore" style="display:none;margin-top:9px">${restGrid}</div>`:''}`;
   document.getElementById('devOverlay').classList.add('open');
+}
+function toggleDevHistMore(){
+  const m=document.getElementById('devHistMore'), b=document.getElementById('devHistMoreBtn');
+  if(!m||!b) return;
+  const opening=m.style.display==='none';
+  m.style.display=opening?'grid':'none';
+  b.textContent=opening?'접기':`이전 업데이트 ${UPDATE_HISTORY.length-5}건 펼치기`;
 }
 function closeDevInfo(){
   document.getElementById('devOverlay').classList.remove('open');
