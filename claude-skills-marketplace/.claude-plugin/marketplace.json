@@ -1,0 +1,17 @@
+{
+  "name": "bugeon-skills",
+  "owner": {
+    "name": "Kim Bugeon"
+  },
+  "metadata": {
+    "description": "김부건의 공용 Claude Code 스킬 모음 (마켓플레이스)",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "bugeon-skills",
+      "source": "./plugins/bugeon-skills",
+      "description": "정적 HTML 앱 점검 등 여러 프로젝트에서 공용으로 쓰는 스킬 묶음"
+    }
+  ]
+}

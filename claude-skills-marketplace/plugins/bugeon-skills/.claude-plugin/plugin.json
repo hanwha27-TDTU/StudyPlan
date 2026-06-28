@@ -1,0 +1,8 @@
+{
+  "name": "bugeon-skills",
+  "description": "김부건의 공용 스킬 묶음. 정적 HTML 앱 점검 등.",
+  "version": "1.0.0",
+  "author": {
+    "name": "Kim Bugeon"
+  }
+}
