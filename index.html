@@ -11,7 +11,10 @@
   *{margin:0;padding:0;box-sizing:border-box;}
   body{background:var(--cream);font-family:'Noto Sans KR',sans-serif;color:var(--ink);min-height:100vh;}
 
-  header{text-align:center;padding:32px 20px 16px;}
+  header{position:relative;text-align:center;padding:32px 20px 16px;}
+  .dev-info-corner{position:absolute;top:16px;right:16px;display:inline-flex;align-items:center;gap:6px;background:#f5f0e8;border:1px solid #e6dccd;border-radius:999px;padding:6px 13px;font-size:0.74rem;font-weight:700;color:var(--ink-light);cursor:pointer;font-family:'Noto Sans KR',sans-serif;transition:background 0.15s,color 0.15s;line-height:1;}
+  .dev-info-corner:hover{background:#ece3d5;color:var(--ink);}
+  .dev-info-corner .ver{color:var(--gold);font-family:'Playfair Display',serif;}
   header::after{content:'';display:block;width:50px;height:2px;background:var(--gold);margin:10px auto 0;border-radius:2px;}
   .header-title{font-family:'Noto Serif KR',serif;font-size:1.9rem;font-weight:700;}
   .header-sub{font-size:0.82rem;color:var(--ink-light);margin-top:3px;letter-spacing:0.08em;}
@@ -289,7 +292,8 @@
     .check-btn{width:20px;height:20px;font-size:0.68rem;}
   }
   @media(max-width:600px){
-    header{padding:22px 14px 10px;}
+    header{padding:38px 14px 10px;}
+    .dev-info-corner{top:8px;right:8px;padding:5px 10px;font-size:0.68rem;}
     .clock-container,#clockCanvas{width:292px;height:292px;}
     .current-task-banner{width:min(100%,320px);height:auto;}
     #clockCanvas{width:292px;height:292px;}
@@ -313,6 +317,7 @@
 </head>
 <body>
 <header>
+  <button class="dev-info-corner" onclick="openDevInfo()" aria-label="개발자 정보" title="개발자 정보">ⓘ <span class="ver" id="cornerVer"></span></button>
   <div class="header-title">Dr. Bugeon의 학습계획표</div>
   <div class="header-sub"><span class="mode-pill" id="modeHeading">학기중-수업</span>Study Plan · Reja Jadvali</div>
 </header>
@@ -357,7 +362,6 @@
       <button class="btn btn-reset" onclick="document.getElementById('importFile').click()">⬆ 전체 백업 복원</button>
       <button class="btn btn-reset" onclick="printA4()">🖨 A4 출력</button>
       <button class="btn btn-reset" onclick="openCloudModal()">☁ 클라우드</button>
-      <button class="btn btn-reset" onclick="openDevInfo()">ⓘ 개발자 정보</button>
       <button class="btn btn-add" onclick="openAddModal()">＋ 시간대 추가</button>
       <input type="file" id="importFile" accept="application/json,.json" style="display:none" onchange="importDataFromFile(this)">
     </div>
@@ -507,16 +511,17 @@
 
 <script>
 const APP_NAME='Dr. Bugeon의 학습계획표';
-const APP_VERSION='2026.06.28 체크갱신·시계·UX보강';
-const APP_UPDATED_AT='2026년 6월 28일';
-const APP_FILE_FALLBACK='260628 Dr. Bugeon의 학습계획표_체크갱신시계UX보강.html';
+const APP_VERSION='2026.06.30 개발자정보 우측상단 이동·버전배지';
+const APP_UPDATED_AT='2026년 6월 30일';
+const APP_FILE_FALLBACK='260630 Dr. Bugeon의 학습계획표_개발자정보우측상단버전배지.html';
 // ── 개발자 정보(필요 시 이 값만 수정하세요) ──
-const APP_VERSION_SHORT='v1.1';
+const APP_VERSION_SHORT='v1.2';
 const APP_DEVELOPER='김부건 (Kim Bugeon)';
 const APP_AFFILIATION='Tashkent State Medical University';
 const APP_CREATED_AT='2026년 6월 19일';
 const APP_ICON_EMOJI='📚';
 const UPDATE_HISTORY=[
+  '2026-06-30: 개발자 정보 버튼을 도구모음에서 우측 상단으로 옮기고, 헤더에 현재 버전 배지를 추가했습니다.',
   '2026-06-28: 완료 체크 시 상단 진행률·날짜별 성취·시계 표시가 즉시 갱신되도록 수정하고, 시계 바늘을 1초마다 부드럽게 돌렸습니다.',
   '2026-06-28: ESC로 모달 닫기, 빈 시간대 안내 배너, 과거 날짜 열람 시 진행중 강조 정리 등 UX를 보강했습니다.',
   '2026-06-22: 모바일·태블릿 카드형 일정 표시, 체크 원 축소, 구분별 시간 합계와 날짜별 성취 통계를 추가했습니다.',
@@ -2079,6 +2084,7 @@ function tickClock(){   // 시계 바늘만 가볍게 1초마다 갱신 (전체 
 }
 normalizeStoredChecks();
 initSbFromCfg();
+document.getElementById('cornerVer').textContent=APP_VERSION_SHORT;   // 우측 상단 버전 배지
 updateModeUI(); updateGoalsDate(); renderGoals(); sortSchedule(); renderTable(); updateUI(); updateDateNav();
 setStorageStatus('브라우저 자동 저장 준비 완료');
 setInterval(updateUI,30000);   // 배너·진행률·통계 등 전체 갱신
