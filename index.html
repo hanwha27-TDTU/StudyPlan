@@ -511,16 +511,17 @@
 
 <script>
 const APP_NAME='Dr. Bugeon의 학습계획표';
-const APP_VERSION='2026.06.30 개발자정보 우측상단 이동·버전배지';
+const APP_VERSION='2026.06.30 A4 인쇄 안정화(팝업 제거)';
 const APP_UPDATED_AT='2026년 6월 30일';
-const APP_FILE_FALLBACK='260630 Dr. Bugeon의 학습계획표_개발자정보우측상단버전배지.html';
+const APP_FILE_FALLBACK='260630 Dr. Bugeon의 학습계획표_A4인쇄안정화.html';
 // ── 개발자 정보(필요 시 이 값만 수정하세요) ──
-const APP_VERSION_SHORT='v1.2';
+const APP_VERSION_SHORT='v1.3';
 const APP_DEVELOPER='김부건 (Kim Bugeon)';
 const APP_AFFILIATION='Tashkent State Medical University';
 const APP_CREATED_AT='2026년 6월 19일';
 const APP_ICON_EMOJI='📚';
 const UPDATE_HISTORY=[
+  '2026-06-30: A4 출력을 팝업창 대신 브라우저 기본 인쇄로 바꿔 모바일에서도 안정적으로 인쇄되도록 수정했습니다.',
   '2026-06-30: 개발자 정보 버튼을 도구모음에서 우측 상단으로 옮기고, 헤더에 현재 버전 배지를 추가했습니다.',
   '2026-06-28: 완료 체크 시 상단 진행률·날짜별 성취·시계 표시가 즉시 갱신되도록 수정하고, 시계 바늘을 1초마다 부드럽게 돌렸습니다.',
   '2026-06-28: ESC로 모달 닫기, 빈 시간대 안내 배너, 과거 날짜 열람 시 진행중 강조 정리 등 UX를 보강했습니다.',
@@ -1567,27 +1568,23 @@ function buildPrintImage(){
 function buildPrintSheet(){
   document.getElementById('printSheet').innerHTML=`<img class="print-page-img" src="${buildPrintImage()}" alt="Dr. Bugeon의 학습계획표">`;
 }
+// A4 출력: 팝업창(window.open) 대신 같은 페이지에서 브라우저 기본 인쇄를 쓴다(@media print).
+// 팝업은 모바일에서 차단되거나, document.write 문서의 onload 경합으로 print()가 호출되지
+// 않아 빈 창만 뜨는 경우가 많았다. 같은 페이지 인쇄는 두 환경에서 모두 안정적이다.
 async function printA4(){
-  if(document.fonts&&document.fonts.ready) await document.fonts.ready;
-  const imageUrl=buildPrintImage();
-  const printWindow=window.open('','_blank','width=900,height=1200');
-  if(!printWindow){alert('인쇄 창이 차단되었습니다. 팝업 차단을 해제한 뒤 다시 시도해주세요.');return;}
-  printWindow.document.open();
-  printWindow.document.write(`<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title></title>
-    <style>
-      @page{size:A4 portrait;margin:0;}
-      html,body{margin:0!important;padding:0!important;width:210mm;height:297mm;background:white;overflow:hidden;}
-      img{display:block;width:210mm;height:297mm;margin:0;padding:0;}
-      @media print{html,body{margin:0!important;padding:0!important;} img{page-break-after:avoid;}}
-    </style></head><body><img src="${imageUrl}" alt="Dr. Bugeon의 학습계획표"></body></html>`);
-  printWindow.document.close();
-  printWindow.onload=()=>{
-    printWindow.focus();
-    printWindow.onafterprint=()=>printWindow.close();   // 인쇄 끝난 뒤 닫기 (이전: 0.5초 후 강제로 닫혀 인쇄가 잘리기도 함)
-    printWindow.print();
-  };
+  if(document.fonts&&document.fonts.ready){ try{ await document.fonts.ready; }catch(e){} }
+  buildPrintSheet();
+  const img=document.querySelector('#printSheet .print-page-img');
+  if(img&&!img.complete){ await new Promise(res=>{ img.onload=img.onerror=res; }); }  // 이미지 디코드 후 인쇄(빈 페이지 방지)
+  window.print();
 }
-window.addEventListener('beforeprint',buildPrintSheet);
+// 사용자가 버튼 대신 브라우저 인쇄(Ctrl+P)를 직접 눌렀을 때만 시트를 만든다.
+// printA4가 미리 만들어 디코드한 이미지를 다시 덮어써 빈 페이지가 되는 것을 막기 위해,
+// 시트가 비어 있을 때만 생성한다.
+window.addEventListener('beforeprint',()=>{
+  if(!document.querySelector('#printSheet .print-page-img')) buildPrintSheet();
+});
+window.addEventListener('afterprint',()=>{ document.getElementById('printSheet').innerHTML=''; });
 
 // ─── GOALS ────────────────────────────────────────────
 function updateGoalsDate(){
